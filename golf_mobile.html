@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Golf Stats">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#0d1b0f">
+<title>Golf Stats</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+
+:root{--green:#2d6a4f;--gl:#52b788;--gold:#e9c46a;--red:#e63946;--orange:#f2994a;--dark:#0d1b0f;--card:#162318;--text:#e8f5e9;--muted:#7a9e84;--border:#2a3d2d;}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{height:100%;overflow:hidden;}
+body{background:var(--dark);color:var(--text);font-family:'DM Sans',sans-serif;display:flex;flex-direction:column;}
+/* Nav tabs */
+.nav{display:flex;background:#0a1508;border-bottom:1px solid var(--border);flex-shrink:0;}
+.nav-tab{flex:1;padding:.7rem .3rem;text-align:center;font-family:'DM Mono',monospace;font-size:.6rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);cursor:pointer;border-right:1px solid var(--border);transition:all .15s;}
+.nav-tab:last-child{border-right:none;}
+.nav-tab.active{color:var(--gl);border-bottom:2px solid var(--gl);background:rgba(82,183,136,.06);}
+/* Screens */
+.screen{display:none;flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;}
+.screen.active{display:flex;flex-direction:column;}
+/* Header */
+.mob-header{padding:.7rem 1rem .5rem;border-bottom:1px solid var(--border);background:#0a1508;flex-shrink:0;}
+.mob-logo{font-family:'Bebas Neue',sans-serif;font-size:1.6rem;color:var(--gl);letter-spacing:.04em;line-height:1;}
+.mob-logo span{color:var(--gold);}
+.mob-sub{font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);margin-top:.1rem;}
+/* Upload */
+.upload-area{margin:1rem;border:2px dashed var(--border);border-radius:8px;padding:1.5rem;text-align:center;background:rgba(82,183,136,.04);}
+.upload-area.dragging{border-color:var(--gl);background:rgba(82,183,136,.1);}
+.upload-icon{font-size:2.5rem;margin-bottom:.5rem;}
+.upload-title{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--gl);letter-spacing:.04em;}
+.upload-sub{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);margin:.3rem 0 .8rem;line-height:1.6;}
+.upload-btn-big{display:block;width:100%;padding:.8rem;border-radius:6px;background:var(--gl);color:#0d1b0f;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.06em;border:none;cursor:pointer;}
+.upload-status{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--gl);margin-top:.6rem;min-height:1.2rem;}
+/* Strip */
+.strip{display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--border);flex-shrink:0;}
+.si{padding:.6rem .4rem;text-align:center;border-right:1px solid var(--border);}
+.si:last-child{border-right:none;}
+.sv{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;color:var(--gl);line-height:1;}
+.sl{font-size:.48rem;font-family:'DM Mono',monospace;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:.1rem;}
+/* Club selector */
+.club-scroll{display:flex;gap:.4rem;padding:.6rem .8rem;overflow-x:auto;-webkit-overflow-scrolling:touch;background:#0a1508;border-bottom:1px solid var(--border);flex-shrink:0;scrollbar-width:none;}
+.club-scroll::-webkit-scrollbar{display:none;}
+.club-btn{flex-shrink:0;font-family:'DM Mono',monospace;font-size:.62rem;padding:.28rem .65rem;border-radius:3px;border:1px solid var(--border);color:var(--muted);background:transparent;cursor:pointer;white-space:nowrap;}
+.club-btn.active{color:#0d1b0f;border-color:transparent;font-weight:600;}
+/* Color selector */
+.color-row{display:flex;align-items:center;gap:.5rem;padding:.4rem .8rem;background:#0a1508;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.color-row::-webkit-scrollbar{display:none;}
+.color-label{font-family:'DM Mono',monospace;font-size:.52rem;color:var(--muted);text-transform:uppercase;flex-shrink:0;}
+.color-row select{font-family:'DM Mono',monospace;font-size:.62rem;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:.25rem .4rem;flex-shrink:0;}
+/* Legend */
+.legend-scroll{display:flex;gap:.3rem;padding:.4rem .8rem;overflow-x:auto;-webkit-overflow-scrolling:touch;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);flex-shrink:0;scrollbar-width:none;}
+.legend-scroll::-webkit-scrollbar{display:none;}
+.leg-item{flex-shrink:0;display:flex;align-items:center;gap:3px;font-family:'DM Mono',monospace;font-size:.52rem;color:var(--muted);padding:2px 6px;border-radius:3px;border:1px solid transparent;cursor:pointer;}
+.leg-item.active-filter{border-color:var(--gold);background:rgba(233,196,106,.12);color:var(--gold);}
+.leg-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+/* Map */
+.map-wrap{position:relative;flex:0 0 auto;}
+canvas{display:block;width:100%;touch-action:none;}
+.tooltip{position:absolute;background:rgba(6,14,8,.97);border:1px solid var(--gl);border-radius:4px;padding:.45rem .6rem;font-family:'DM Mono',monospace;font-size:.57rem;color:var(--text);pointer-events:none;display:none;z-index:20;line-height:1.8;max-width:200px;white-space:nowrap;}
+.tt-row{display:flex;justify-content:space-between;gap:.6rem;}
+.tt-key{color:var(--muted);}
+/* Stats cards */
+.stats-section{padding:.7rem;}
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.4rem;}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:.5rem .6rem;}
+.sb-val{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;line-height:1;}
+.sb-lbl{font-family:'DM Mono',monospace;font-size:.5rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:.1rem;}
+.sb-bar{height:2px;background:var(--border);border-radius:1px;margin-top:.25rem;overflow:hidden;}
+.sb-fill{height:100%;border-radius:1px;}
+/* Lateral */
+.lat-wrap{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:.5rem .7rem;margin:.4rem 0;}
+.lat-field{position:relative;height:28px;background:rgba(0,0,0,.35);border-radius:3px;overflow:hidden;margin:.3rem 0;}
+.lat-center{position:absolute;left:50%;width:1px;height:100%;background:rgba(255,255,255,.15);}
+/* Table screen */
+.table-controls-mob{display:flex;gap:.4rem;padding:.5rem .7rem;background:#0a1508;border-bottom:1px solid var(--border);flex-shrink:0;overflow-x:auto;scrollbar-width:none;}
+.table-controls-mob::-webkit-scrollbar{display:none;}
+.shot-list{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.shot-item{display:flex;align-items:center;gap:.5rem;padding:.55rem .8rem;border-bottom:1px solid rgba(42,61,45,.4);cursor:pointer;}
+.shot-item.selected{background:rgba(82,183,136,.12);}
+.shot-item.hidden-s{opacity:.3;}
+.si-club{width:28px;flex-shrink:0;font-family:'DM Mono',monospace;font-size:.58rem;font-weight:600;}
+.si-dist{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;line-height:1;color:var(--gl);width:44px;flex-shrink:0;}
+.si-params{flex:1;display:flex;flex-wrap:wrap;gap:.2rem .5rem;}
+.si-tag{font-family:'DM Mono',monospace;font-size:.52rem;color:var(--muted);}
+.si-tag span{color:var(--text);}
+.si-hide{padding:.3rem .5rem;font-size:.7rem;background:none;border:none;color:var(--muted);cursor:pointer;flex-shrink:0;}
+/* Detail panel */
+.detail-panel{background:var(--card);border:1px solid var(--border);border-radius:6px;margin:.7rem;padding:.8rem;}
+.detail-title{font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gl);margin-bottom:.5rem;}
+.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:.3rem;}
+.dg-item{font-family:'DM Mono',monospace;font-size:.58rem;padding:.25rem 0;border-bottom:1px solid rgba(42,61,45,.4);}
+.dg-key{color:var(--muted);display:block;font-size:.5rem;}
+/* Reset btn */
+.reset-mob{font-family:'DM Mono',monospace;font-size:.58rem;padding:.25rem .55rem;border-radius:3px;border:1px solid rgba(233,196,106,.35);color:var(--gold);background:transparent;cursor:pointer;flex-shrink:0;}
+/* Filter fab */
+.filter-fab{position:fixed;bottom:1.2rem;right:1rem;width:44px;height:44px;border-radius:50%;background:var(--gl);border:none;font-size:1.1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(0,0,0,.4);z-index:100;}
+.filter-sheet{position:fixed;bottom:0;left:0;right:0;background:#0f1e12;border-top:1px solid var(--border);border-radius:12px 12px 0 0;padding:1rem 1rem 2rem;z-index:200;transform:translateY(100%);transition:transform .25s ease;max-height:70vh;overflow-y:auto;}
+.filter-sheet.open{transform:translateY(0);}
+.filter-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:150;display:none;}
+.filter-overlay.open{display:block;}
+.filter-row-m{display:flex;align-items:center;gap:.5rem;margin-bottom:.5rem;}
+.filter-lbl-m{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);width:100px;flex-shrink:0;}
+.filter-input-m{flex:1;font-family:'DM Mono',monospace;font-size:.65rem;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:.3rem .5rem;}
+/* Equipment edit */
+#equip-text{border-bottom:1px dashed rgba(82,183,136,.4);outline:none;cursor:text;}
+
+</style>
+</head>
+<body>
+
+<div class="mob-header">
+  <div class="mob-logo">Golf <span>Stats</span></div>
+  <div class="mob-sub">
+    <span id="equip-text" contenteditable="true" spellcheck="false" style="border-bottom:1px dashed rgba(82,183,136,.4);outline:none;cursor:text;">Titleist AP2 716</span>
+  </div>
+</div>
+
+<div class="nav">
+  <div class="nav-tab active" data-screen="screen-map" onclick="showScreen('screen-map',this)">🗺 Campo</div>
+  <div class="nav-tab" data-screen="screen-stats" onclick="showScreen('screen-stats',this)">📊 Stats</div>
+  <div class="nav-tab" data-screen="screen-shots" onclick="showScreen('screen-shots',this)">📋 Golpes</div>
+  <div class="nav-tab" data-screen="screen-data" onclick="showScreen('screen-data',this)">📂 Datos</div>
+</div>
+
+<!-- CAMPO -->
+<div class="screen active" id="screen-map">
+  <div class="strip" id="strip-mob"></div>
+  <div class="club-scroll" id="tabs-mob"></div>
+  <div class="color-row">
+    <span class="color-label">Color:</span>
+    <select id="colorBy-mob" onchange="colorBy=this.value;legendFilters=new Set();buildLegendMob();drawMapMob();">
+      <option value="calidad">Calidad</option>
+      <option value="dist_total">Distancia</option>
+      <option value="desv_total">Lateral</option>
+      <option value="cara_palo">Cara palo</option>
+      <option value="efecto_lat">Ef. lateral</option>
+      <option value="angulo_ataque">Ataque</option>
+      <option value="vel_bola">Vel. bola</option>
+      <option value="altura_max">Alt. máx.</option>
+      <option value="retroceso">Backspin</option>
+    </select>
+    <button class="reset-mob" onclick="resetAll()">↺ Reset</button>
+  </div>
+  <div class="legend-scroll" id="legend-mob"></div>
+  <div class="map-wrap">
+    <canvas id="fairway-mob"></canvas>
+    <div class="tooltip" id="tooltip-mob"></div>
+  </div>
+</div>
+
+<!-- STATS -->
+<div class="screen" id="screen-stats">
+  <div class="club-scroll" id="tabs-stats"></div>
+  <div class="stats-section">
+    <div class="stat-row" id="stats-main-grid"></div>
+    <div class="lat-wrap">
+      <div style="font-family:'DM Mono',monospace;font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;" id="lat-lbl-mob">Dispersión lateral</div>
+      <div class="lat-field" id="lat-field-mob"><div class="lat-center"></div></div>
+      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:.5rem;color:var(--muted);margin-top:.2rem;"><span>◄ Izq</span><span>Centro</span><span>Der ►</span></div>
+    </div>
+    <div id="detail-selected"></div>
+  </div>
+</div>
+
+<!-- GOLPES -->
+<div class="screen" id="screen-shots">
+  <div class="table-controls-mob">
+    <span style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);flex-shrink:0;">Ordenar:</span>
+    <select id="sort-mob" style="font-family:'DM Mono',monospace;font-size:.6rem;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:.25rem .4rem;">
+      <option value="">—</option>
+      <option value="dist_total">Distancia</option>
+      <option value="desv_total">Lateral</option>
+      <option value="calidad">Calidad</option>
+      <option value="cara_palo">Cara palo</option>
+      <option value="vel_bola">Vel. bola</option>
+      <option value="altura_max">Alt. máx.</option>
+    </select>
+    <button class="reset-mob" onclick="sortDir*=-1;buildShotList()">⇅</button>
+    <span id="shot-count-mob" style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);flex-shrink:0;"></span>
+  </div>
+  <div class="shot-list" id="shot-list"></div>
+</div>
+
+<!-- DATOS -->
+<div class="screen" id="screen-data">
+  <div style="padding:1rem;">
+    <div class="upload-area">
+      <div class="upload-icon">📂</div>
+      <div class="upload-title">Cargar Sesión</div>
+      <div class="upload-sub">Selecciona el CSV de tu launch monitor<br>(Trackman, GC2, FlightScope, etc.)</div>
+      <label for="csvInput-mob" style="display:block;width:100%;padding:.8rem;border-radius:6px;background:var(--gl);color:#0d1b0f;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.06em;text-align:center;cursor:pointer;box-sizing:border-box;">
+        📁 Seleccionar CSV
+      </label>
+      <input type="file" id="csvInput-mob" accept=".csv,.CSV"
+             style="position:absolute;left:-9999px;opacity:0;width:1px;height:1px;">
+      <div class="upload-status" id="upload-status-mob">Sesión cargada: 24 Abr 2026 · 137 golpes</div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.9rem;margin-top:.8rem;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--gl);margin-bottom:.5rem;">Sesión Actual</div>
+      <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);line-height:2;" id="session-info">
+        📅 Fecha: 24 Abril 2026<br>⛳ Palos: SW, PW, H9, H8, H7, H6, H5<br>🎯 Golpes totales: 137<br>🌡 Temperatura: 16.4°C<br>🌬 Presión: 95.82 kPa
+      </div>
+    </div>
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.9rem;margin-top:.8rem;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--gl);margin-bottom:.5rem;">Instalar como App</div>
+      <p style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.9;">
+        <strong style="color:var(--text)">iPhone / iPad (Safari):</strong><br>
+        1. Toca el botón compartir (□↑)<br>
+        2. "Añadir a pantalla de inicio"<br>
+        3. Listo — icono en tu pantalla 📲<br><br>
+        <strong style="color:var(--text)">Android (Chrome):</strong><br>
+        1. Menú ⋮ → "Instalar aplicación"
+      </p>
+    </div>
+  </div>
+</div>
+
+<!-- Filtro FAB -->
+<button class="filter-fab" onclick="openFilterSheet()" title="Filtros">⚙</button>
+<div class="filter-overlay" id="filter-overlay"></div>
+<div class="filter-sheet" id="filter-sheet">
+  <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gl);margin-bottom:.8rem;">Filtrar por rango</div>
+  <div id="filter-content-mob"></div>
+  <button onclick="closeFilterSheet();render();" style="width:100%;margin-top:.8rem;padding:.6rem;border-radius:4px;background:var(--gl);color:#0d1b0f;font-family:'Bebas Neue',sans-serif;font-size:1rem;border:none;cursor:pointer;">Aplicar</button>
+</div>
+
+<script>
+const SHOTS = [{"fecha":"24/4/26 8:15:48","palo":"Sand Wedge","vel_palo":30.77,"angulo_ataque":-0.5,"linea_cabeza":4.98,"cara_palo":3.74,"cara_a_linea":-1.24,"vel_bola":27.11,"calidad":0.881,"angulo_lanzamiento":38.76,"dir_lanzamiento":3.69,"retroceso":6383.18,"efecto_lat":-66.85,"vel_rotacion":6383.53,"eje_rotacion":0.6,"altura_max":16.23,"dist_vuelo":58.06,"ang_desv_vuelo":3.85,"desv_vuelo":3.9,"dist_total":61.35,"ang_desv_total":3.86,"desv_total":4.13},
+{"fecha":"24/4/26 8:16:00","palo":"Sand Wedge","vel_palo":34.05,"angulo_ataque":1.02,"linea_cabeza":3.0,"cara_palo":-7.55,"cara_a_linea":-10.55,"vel_bola":39.29,"calidad":1.154,"angulo_lanzamiento":21.91,"dir_lanzamiento":-5.83,"retroceso":6083.56,"efecto_lat":2360.88,"vel_rotacion":6525.6,"eje_rotacion":-21.21,"altura_max":17.12,"dist_vuelo":101.96,"ang_desv_vuelo":-13.79,"desv_vuelo":-24.31,"dist_total":109.97,"ang_desv_total":-14.31,"desv_total":-27.18},
+{"fecha":"24/4/26 8:16:14","palo":"Sand Wedge","vel_palo":35.78,"angulo_ataque":-1.62,"linea_cabeza":8.19,"cara_palo":1.31,"cara_a_linea":-6.88,"vel_bola":33.01,"calidad":0.923,"angulo_lanzamiento":38.89,"dir_lanzamiento":2.1,"retroceso":6404.08,"efecto_lat":1175.37,"vel_rotacion":6511.05,"eje_rotacion":-10.4,"altura_max":24.19,"dist_vuelo":76.25,"ang_desv_vuelo":-1.54,"desv_vuelo":-2.05,"dist_total":79.54,"ang_desv_total":-1.65,"desv_total":-2.29},
+{"fecha":"24/4/26 8:16:27","palo":"Sand Wedge","vel_palo":35.42,"angulo_ataque":-0.47,"linea_cabeza":7.43,"cara_palo":-5.9,"cara_a_linea":-13.33,"vel_bola":34.98,"calidad":0.988,"angulo_lanzamiento":35.81,"dir_lanzamiento":-3.91,"retroceso":5194.42,"efecto_lat":1487.51,"vel_rotacion":5403.21,"eje_rotacion":-15.98,"altura_max":24.49,"dist_vuelo":86.64,"ang_desv_vuelo":-9.53,"desv_vuelo":-14.34,"dist_total":92.19,"ang_desv_total":-9.79,"desv_total":-15.67},
+{"fecha":"24/4/26 8:16:50","palo":"Sand Wedge","vel_palo":32.02,"angulo_ataque":2.78,"linea_cabeza":9.12,"cara_palo":7.04,"cara_a_linea":-2.08,"vel_bola":28.2,"calidad":0.881,"angulo_lanzamiento":45.53,"dir_lanzamiento":6.93,"retroceso":4120.6,"efecto_lat":-338.77,"vel_rotacion":4134.5,"eje_rotacion":4.7,"altura_max":21.2,"dist_vuelo":59.86,"ang_desv_vuelo":8.14,"desv_vuelo":8.48,"dist_total":64.88,"ang_desv_total":8.21,"desv_total":9.27},
+{"fecha":"24/4/26 8:17:46","palo":"Sand Wedge","vel_palo":16.99,"angulo_ataque":1.12,"linea_cabeza":7.57,"cara_palo":3.42,"cara_a_linea":-4.15,"vel_bola":17.28,"calidad":1.017,"angulo_lanzamiento":34.44,"dir_lanzamiento":3.76,"retroceso":3691.91,"efecto_lat":469.02,"vel_rotacion":3721.58,"eje_rotacion":-7.24,"altura_max":5.25,"dist_vuelo":27.63,"ang_desv_vuelo":2.95,"desv_vuelo":1.42,"dist_total":34.7,"ang_desv_total":2.81,"desv_total":1.7},
+{"fecha":"24/4/26 8:18:03","palo":"Sand Wedge","vel_palo":13.98,"angulo_ataque":-1.6,"linea_cabeza":1.4,"cara_palo":-7.88,"cara_a_linea":-9.28,"vel_bola":15.3,"calidad":1.094,"angulo_lanzamiento":29.98,"dir_lanzamiento":-6.3,"retroceso":3478.25,"efecto_lat":745.67,"vel_rotacion":3557.28,"eje_rotacion":-12.1,"altura_max":3.22,"dist_vuelo":20.63,"ang_desv_vuelo":-7.29,"desv_vuelo":-2.62,"dist_total":25.33,"ang_desv_total":-7.48,"desv_total":-3.3},
+{"fecha":"24/4/26 8:18:16","palo":"Sand Wedge","vel_palo":9.71,"angulo_ataque":6.77,"linea_cabeza":7.91,"cara_palo":-1.8,"cara_a_linea":-9.71,"vel_bola":10.87,"calidad":1.119,"angulo_lanzamiento":30.93,"dir_lanzamiento":-0.49,"retroceso":2381.67,"efecto_lat":297.08,"vel_rotacion":2400.13,"eje_rotacion":-7.11,"altura_max":1.66,"dist_vuelo":10.63,"ang_desv_vuelo":-0.78,"desv_vuelo":-0.15,"dist_total":16.77,"ang_desv_total":-0.88,"desv_total":-0.26},
+{"fecha":"24/4/26 8:18:29","palo":"Sand Wedge","vel_palo":8.71,"angulo_ataque":6.25,"linea_cabeza":9.74,"cara_palo":-4.26,"cara_a_linea":-14.0,"vel_bola":9.35,"calidad":1.073,"angulo_lanzamiento":30.9,"dir_lanzamiento":-2.28,"retroceso":2306.9,"efecto_lat":325.86,"vel_rotacion":2329.8,"eje_rotacion":-8.04,"altura_max":1.21,"dist_vuelo":7.92,"ang_desv_vuelo":-2.54,"desv_vuelo":-0.35,"dist_total":13.25,"ang_desv_total":-2.63,"desv_total":-0.61},
+{"fecha":"24/4/26 8:18:43","palo":"Sand Wedge","vel_palo":25.21,"angulo_ataque":null,"linea_cabeza":null,"cara_palo":null,"cara_a_linea":null,"vel_bola":27.59,"calidad":1.094,"angulo_lanzamiento":27.45,"dir_lanzamiento":-8.39,"retroceso":4320.7,"efecto_lat":315.02,"vel_rotacion":4332.17,"eje_rotacion":-4.17,"altura_max":10.26,"dist_vuelo":61.48,"ang_desv_vuelo":-9.31,"desv_vuelo":-9.95,"dist_total":70.91,"ang_desv_total":-9.41,"desv_total":-11.59},
+{"fecha":"24/4/26 8:18:58","palo":"Sand Wedge","vel_palo":22.65,"angulo_ataque":-1.75,"linea_cabeza":-5.51,"cara_palo":-0.08,"cara_a_linea":5.43,"vel_bola":21.14,"calidad":0.933,"angulo_lanzamiento":37.99,"dir_lanzamiento":-0.75,"retroceso":5183.97,"efecto_lat":-587.89,"vel_rotacion":5217.2,"eje_rotacion":6.47,"altura_max":9.37,"dist_vuelo":39.54,"ang_desv_vuelo":0.39,"desv_vuelo":0.27,"dist_total":44.5,"ang_desv_total":0.51,"desv_total":0.39},
+{"fecha":"24/4/26 8:19:46","palo":"Sand Wedge","vel_palo":32.76,"angulo_ataque":-2.17,"linea_cabeza":8.91,"cara_palo":-2.91,"cara_a_linea":-11.82,"vel_bola":31.13,"calidad":0.95,"angulo_lanzamiento":31.68,"dir_lanzamiento":-1.27,"retroceso":5766.55,"efecto_lat":2146.85,"vel_rotacion":6153.22,"eje_rotacion":-20.42,"altura_max":16.4,"dist_vuelo":73.59,"ang_desv_vuelo":-7.44,"desv_vuelo":-9.53,"dist_total":79.37,"ang_desv_total":-7.83,"desv_total":-10.81},
+{"fecha":"24/4/26 8:19:58","palo":"Sand Wedge","vel_palo":25.41,"angulo_ataque":null,"linea_cabeza":null,"cara_palo":null,"cara_a_linea":null,"vel_bola":28.52,"calidad":1.122,"angulo_lanzamiento":34.27,"dir_lanzamiento":2.05,"retroceso":5345.97,"efecto_lat":1234.21,"vel_rotacion":5486.59,"eje_rotacion":-13.0,"altura_max":15.23,"dist_vuelo":64.88,"ang_desv_vuelo":-1.43,"desv_vuelo":-1.62,"dist_total":70.88,"ang_desv_total":-1.68,"desv_total":-2.08},
+{"fecha":"24/4/26 8:20:10","palo":"Sand Wedge","vel_palo":31.42,"angulo_ataque":6.64,"linea_cabeza":5.19,"cara_palo":4.59,"cara_a_linea":-0.6,"vel_bola":32.7,"calidad":1.041,"angulo_lanzamiento":35.08,"dir_lanzamiento":4.42,"retroceso":6680.89,"efecto_lat":813.21,"vel_rotacion":6730.2,"eje_rotacion":-6.94,"altura_max":21.14,"dist_vuelo":77.57,"ang_desv_vuelo":2.04,"desv_vuelo":2.76,"dist_total":81.41,"ang_desv_total":1.95,"desv_total":2.77},
+{"fecha":"24/4/26 8:20:48","palo":"Pitching Wedge","vel_palo":34.22,"angulo_ataque":1.52,"linea_cabeza":4.82,"cara_palo":-4.34,"cara_a_linea":-9.16,"vel_bola":40.84,"calidad":1.193,"angulo_lanzamiento":20.02,"dir_lanzamiento":-2.96,"retroceso":6224.78,"efecto_lat":1770.83,"vel_rotacion":6471.76,"eje_rotacion":-15.88,"altura_max":17.14,"dist_vuelo":107.89,"ang_desv_vuelo":-9.16,"desv_vuelo":-17.17,"dist_total":116.58,"ang_desv_total":-9.56,"desv_total":-19.37},
+{"fecha":"24/4/26 8:21:06","palo":"Pitching Wedge","vel_palo":34.67,"angulo_ataque":-0.02,"linea_cabeza":7.59,"cara_palo":2.05,"cara_a_linea":-5.54,"vel_bola":45.05,"calidad":1.299,"angulo_lanzamiento":5.99,"dir_lanzamiento":2.64,"retroceso":2601.75,"efecto_lat":486.9,"vel_rotacion":2646.92,"eje_rotacion":-10.6,"altura_max":2.94,"dist_vuelo":84.94,"ang_desv_vuelo":0.8,"desv_vuelo":1.19,"dist_total":139.17,"ang_desv_total":0.08,"desv_total":0.2},
+{"fecha":"24/4/26 8:21:25","palo":"Pitching Wedge","vel_palo":34.33,"angulo_ataque":0.09,"linea_cabeza":8.79,"cara_palo":2.85,"cara_a_linea":-5.94,"vel_bola":39.98,"calidad":1.165,"angulo_lanzamiento":29.12,"dir_lanzamiento":3.44,"retroceso":8177.52,"efecto_lat":1249.88,"vel_rotacion":8272.49,"eje_rotacion":-8.69,"altura_max":26.21,"dist_vuelo":101.57,"ang_desv_vuelo":-0.44,"desv_vuelo":-0.78,"dist_total":104.49,"ang_desv_total":-0.52,"desv_total":-0.94},
+{"fecha":"24/4/26 8:22:08","palo":"Pitching Wedge","vel_palo":22.17,"angulo_ataque":2.04,"linea_cabeza":17.63,"cara_palo":24.14,"cara_a_linea":6.51,"vel_bola":26.2,"calidad":1.182,"angulo_lanzamiento":16.4,"dir_lanzamiento":22.04,"retroceso":1774.25,"efecto_lat":53.9,"vel_rotacion":1775.07,"eje_rotacion":-1.74,"altura_max":3.48,"dist_vuelo":43.7,"ang_desv_vuelo":21.86,"desv_vuelo":16.28,"dist_total":73.16,"ang_desv_total":21.75,"desv_total":27.11},
+{"fecha":"24/4/26 8:22:25","palo":"Pitching Wedge","vel_palo":34.2,"angulo_ataque":-1.97,"linea_cabeza":3.53,"cara_palo":-0.6,"cara_a_linea":-4.13,"vel_bola":39.0,"calidad":1.14,"angulo_lanzamiento":28.95,"dir_lanzamiento":-0.05,"retroceso":7869.3,"efecto_lat":572.36,"vel_rotacion":7890.09,"eje_rotacion":-4.16,"altura_max":24.76,"dist_vuelo":99.39,"ang_desv_vuelo":-1.84,"desv_vuelo":-3.19,"dist_total":102.82,"ang_desv_total":-1.88,"desv_total":-3.38},
+{"fecha":"24/4/26 8:22:47","palo":"Pitching Wedge","vel_palo":35.75,"angulo_ataque":0.9,"linea_cabeza":4.26,"cara_palo":0.32,"cara_a_linea":-3.94,"vel_bola":37.78,"calidad":1.057,"angulo_lanzamiento":30.58,"dir_lanzamiento":0.79,"retroceso":7732.15,"efecto_lat":1005.6,"vel_rotacion":7797.27,"eje_rotacion":-7.41,"altura_max":24.52,"dist_vuelo":94.75,"ang_desv_vuelo":-2.29,"desv_vuelo":-3.78,"dist_total":98.06,"ang_desv_total":-2.36,"desv_total":-4.05},
+{"fecha":"24/4/26 8:23:05","palo":"Pitching Wedge","vel_palo":35.37,"angulo_ataque":-1.99,"linea_cabeza":6.7,"cara_palo":6.5,"cara_a_linea":-0.2,"vel_bola":36.76,"calidad":1.039,"angulo_lanzamiento":26.54,"dir_lanzamiento":6.18,"retroceso":9533.29,"efecto_lat":-990.21,"vel_rotacion":9584.58,"eje_rotacion":5.93,"altura_max":19.88,"dist_vuelo":90.3,"ang_desv_vuelo":8.61,"desv_vuelo":13.52,"dist_total":92.96,"ang_desv_total":8.67,"desv_total":14.01},
+{"fecha":"24/4/26 8:23:27","palo":"Pitching Wedge","vel_palo":35.62,"angulo_ataque":-1.17,"linea_cabeza":5.28,"cara_palo":4.15,"cara_a_linea":-1.13,"vel_bola":37.96,"calidad":1.066,"angulo_lanzamiento":35.79,"dir_lanzamiento":4.07,"retroceso":5391.35,"efecto_lat":-629.52,"vel_rotacion":5427.98,"eje_rotacion":6.66,"altura_max":29.15,"dist_vuelo":96.39,"ang_desv_vuelo":6.67,"desv_vuelo":11.2,"dist_total":101.76,"ang_desv_total":6.77,"desv_total":11.99},
+{"fecha":"24/4/26 8:23:47","palo":"Pitching Wedge","vel_palo":38.07,"angulo_ataque":-1.05,"linea_cabeza":6.16,"cara_palo":0.66,"cara_a_linea":-5.5,"vel_bola":40.55,"calidad":1.065,"angulo_lanzamiento":29.53,"dir_lanzamiento":1.31,"retroceso":10105.43,"efecto_lat":275.21,"vel_rotacion":10109.18,"eje_rotacion":-1.56,"altura_max":27.7,"dist_vuelo":99.29,"ang_desv_vuelo":0.57,"desv_vuelo":0.99,"dist_total":100.41,"ang_desv_total":0.56,"desv_total":0.99},
+{"fecha":"24/4/26 8:24:10","palo":"Pitching Wedge","vel_palo":37.55,"angulo_ataque":-2.02,"linea_cabeza":7.59,"cara_palo":1.68,"cara_a_linea":-5.91,"vel_bola":40.69,"calidad":1.084,"angulo_lanzamiento":27.55,"dir_lanzamiento":2.33,"retroceso":8666.18,"efecto_lat":826.83,"vel_rotacion":8705.53,"eje_rotacion":-5.45,"altura_max":25.8,"dist_vuelo":103.91,"ang_desv_vuelo":-0.17,"desv_vuelo":-0.3,"dist_total":106.72,"ang_desv_total":-0.21,"desv_total":-0.4},
+{"fecha":"24/4/26 8:24:27","palo":"Pitching Wedge","vel_palo":38.73,"angulo_ataque":-0.56,"linea_cabeza":4.56,"cara_palo":-4.28,"cara_a_linea":-8.84,"vel_bola":43.52,"calidad":1.124,"angulo_lanzamiento":27.0,"dir_lanzamiento":-2.94,"retroceso":15351.4,"efecto_lat":-329.61,"vel_rotacion":15354.94,"eje_rotacion":1.23,"altura_max":28.99,"dist_vuelo":94.74,"ang_desv_vuelo":-2.31,"desv_vuelo":-3.82,"dist_total":91.87,"ang_desv_total":-2.33,"desv_total":-3.73},
+{"fecha":"24/4/26 8:24:39","palo":"Pitching Wedge","vel_palo":35.32,"angulo_ataque":1.55,"linea_cabeza":7.3,"cara_palo":-3.81,"cara_a_linea":-11.11,"vel_bola":41.43,"calidad":1.173,"angulo_lanzamiento":27.92,"dir_lanzamiento":-2.22,"retroceso":7590.86,"efecto_lat":238.55,"vel_rotacion":7594.61,"eje_rotacion":-1.8,"altura_max":27.08,"dist_vuelo":108.22,"ang_desv_vuelo":-3.04,"desv_vuelo":-5.73,"dist_total":112.13,"ang_desv_total":-3.06,"desv_total":-5.98},
+{"fecha":"24/4/26 8:25:00","palo":"Pitching Wedge","vel_palo":37.63,"angulo_ataque":-2.66,"linea_cabeza":6.32,"cara_palo":-0.81,"cara_a_linea":-7.13,"vel_bola":34.34,"calidad":0.913,"angulo_lanzamiento":15.2,"dir_lanzamiento":0.13,"retroceso":4714.65,"efecto_lat":-55.96,"vel_rotacion":4714.98,"eje_rotacion":0.68,"altura_max":7.21,"dist_vuelo":76.98,"ang_desv_vuelo":0.3,"desv_vuelo":0.4,"dist_total":100.73,"ang_desv_total":0.33,"desv_total":0.59},
+{"fecha":"24/4/26 8:25:19","palo":"Pitching Wedge","vel_palo":37.17,"angulo_ataque":-1.24,"linea_cabeza":8.26,"cara_palo":18.87,"cara_a_linea":10.61,"vel_bola":43.9,"calidad":1.181,"angulo_lanzamiento":1.22,"dir_lanzamiento":16.54,"retroceso":7278.77,"efecto_lat":2067.92,"vel_rotacion":7566.82,"eje_rotacion":-15.86,"altura_max":0.94,"dist_vuelo":67.59,"ang_desv_vuelo":12.96,"desv_vuelo":15.16,"dist_total":115.15,"ang_desv_total":11.6,"desv_total":23.15},
+{"fecha":"24/4/26 8:25:44","palo":"Pitching Wedge","vel_palo":37.5,"angulo_ataque":-1.91,"linea_cabeza":7.46,"cara_palo":3.32,"cara_a_linea":-4.14,"vel_bola":40.06,"calidad":1.068,"angulo_lanzamiento":32.92,"dir_lanzamiento":3.66,"retroceso":6220.57,"efecto_lat":327.09,"vel_rotacion":6229.16,"eje_rotacion":-3.01,"altura_max":29.85,"dist_vuelo":103.49,"ang_desv_vuelo":2.38,"desv_vuelo":4.29,"dist_total":108.34,"ang_desv_total":2.34,"desv_total":4.42},
+{"fecha":"24/4/26 8:25:57","palo":"Pitching Wedge","vel_palo":36.15,"angulo_ataque":0.83,"linea_cabeza":5.7,"cara_palo":0.15,"cara_a_linea":-5.55,"vel_bola":41.23,"calidad":1.141,"angulo_lanzamiento":29.07,"dir_lanzamiento":0.84,"retroceso":7898.39,"efecto_lat":1835.11,"vel_rotacion":8108.77,"eje_rotacion":-13.08,"altura_max":27.69,"dist_vuelo":105.66,"ang_desv_vuelo":-5.16,"desv_vuelo":-9.51,"dist_total":108.8,"ang_desv_total":-5.29,"desv_total":-10.03},
+{"fecha":"24/4/26 8:26:08","palo":"Pitching Wedge","vel_palo":37.22,"angulo_ataque":-0.7,"linea_cabeza":4.66,"cara_palo":0.69,"cara_a_linea":-3.97,"vel_bola":38.88,"calidad":1.045,"angulo_lanzamiento":28.23,"dir_lanzamiento":1.15,"retroceso":9347.54,"efecto_lat":13.05,"vel_rotacion":9347.55,"eje_rotacion":-0.08,"altura_max":24.14,"dist_vuelo":96.8,"ang_desv_vuelo":1.12,"desv_vuelo":1.89,"dist_total":98.92,"ang_desv_total":1.12,"desv_total":1.93},
+{"fecha":"24/4/26 8:26:27","palo":"Pitching Wedge","vel_palo":33.41,"angulo_ataque":4.44,"linea_cabeza":8.96,"cara_palo":5.02,"cara_a_linea":-3.94,"vel_bola":38.29,"calidad":1.146,"angulo_lanzamiento":30.94,"dir_lanzamiento":5.24,"retroceso":6714.7,"efecto_lat":1546.51,"vel_rotacion":6890.49,"eje_rotacion":-12.97,"altura_max":25.22,"dist_vuelo":97.66,"ang_desv_vuelo":-0.06,"desv_vuelo":-0.09,"dist_total":102.17,"ang_desv_total":-0.23,"desv_total":-0.42},
+{"fecha":"24/4/26 8:26:43","palo":"Pitching Wedge","vel_palo":35.66,"angulo_ataque":4.84,"linea_cabeza":8.35,"cara_palo":-3.8,"cara_a_linea":-12.15,"vel_bola":35.49,"calidad":0.995,"angulo_lanzamiento":25.86,"dir_lanzamiento":-2.07,"retroceso":4651.76,"efecto_lat":3268.1,"vel_rotacion":5685.01,"eje_rotacion":-35.09,"altura_max":15.59,"dist_vuelo":87.59,"ang_desv_vuelo":-13.01,"desv_vuelo":-19.71,"dist_total":96.35,"ang_desv_total":-13.96,"desv_total":-23.25},
+{"fecha":"24/4/26 8:27:55","palo":"Pitching Wedge","vel_palo":37.68,"angulo_ataque":-1.19,"linea_cabeza":7.13,"cara_palo":1.27,"cara_a_linea":-5.86,"vel_bola":41.8,"calidad":1.109,"angulo_lanzamiento":28.49,"dir_lanzamiento":1.94,"retroceso":9493.3,"efecto_lat":366.36,"vel_rotacion":9500.37,"eje_rotacion":-2.21,"altura_max":28.43,"dist_vuelo":104.95,"ang_desv_vuelo":0.87,"desv_vuelo":1.59,"dist_total":106.53,"ang_desv_total":0.86,"desv_total":1.59},
+{"fecha":"24/4/26 8:29:11","palo":"Pitching Wedge","vel_palo":38.39,"angulo_ataque":-1.04,"linea_cabeza":6.72,"cara_palo":1.15,"cara_a_linea":-5.57,"vel_bola":38.94,"calidad":1.014,"angulo_lanzamiento":36.74,"dir_lanzamiento":1.78,"retroceso":5578.87,"efecto_lat":31.16,"vel_rotacion":5578.96,"eje_rotacion":-0.32,"altura_max":31.62,"dist_vuelo":98.13,"ang_desv_vuelo":1.65,"desv_vuelo":2.83,"dist_total":103.15,"ang_desv_total":1.65,"desv_total":2.97},
+{"fecha":"24/4/26 8:29:56","palo":"Pitching Wedge","vel_palo":33.21,"angulo_ataque":3.75,"linea_cabeza":6.56,"cara_palo":-3.69,"cara_a_linea":-10.25,"vel_bola":39.55,"calidad":1.191,"angulo_lanzamiento":26.42,"dir_lanzamiento":-2.21,"retroceso":4717.52,"efecto_lat":2032.66,"vel_rotacion":5136.8,"eje_rotacion":-23.31,"altura_max":21.36,"dist_vuelo":106.15,"ang_desv_vuelo":-10.78,"desv_vuelo":-19.86,"dist_total":115.1,"ang_desv_total":-11.36,"desv_total":-22.68},
+{"fecha":"24/4/26 8:30:05","palo":"Pitching Wedge","vel_palo":36.73,"angulo_ataque":-1.1,"linea_cabeza":4.29,"cara_palo":4.1,"cara_a_linea":-0.19,"vel_bola":35.63,"calidad":0.97,"angulo_lanzamiento":29.73,"dir_lanzamiento":3.9,"retroceso":9041.59,"efecto_lat":130.99,"vel_rotacion":9042.54,"eje_rotacion":-0.83,"altura_max":21.15,"dist_vuelo":86.41,"ang_desv_vuelo":3.57,"desv_vuelo":5.39,"dist_total":88.84,"ang_desv_total":3.57,"desv_total":5.53},
+{"fecha":"24/4/26 8:30:15","palo":"Pitching Wedge","vel_palo":37.24,"angulo_ataque":-0.96,"linea_cabeza":5.7,"cara_palo":6.42,"cara_a_linea":0.72,"vel_bola":43.28,"calidad":1.162,"angulo_lanzamiento":17.09,"dir_lanzamiento":5.99,"retroceso":5817.11,"efecto_lat":213.3,"vel_rotacion":5821.02,"eje_rotacion":-2.1,"altura_max":16.66,"dist_vuelo":117.79,"ang_desv_vuelo":5.15,"desv_vuelo":10.58,"dist_total":128.43,"ang_desv_total":5.09,"desv_total":11.39},
+{"fecha":"24/4/26 8:31:15","palo":"Pitching Wedge","vel_palo":37.41,"angulo_ataque":0.59,"linea_cabeza":6.2,"cara_palo":-1.93,"cara_a_linea":-8.13,"vel_bola":44.74,"calidad":1.196,"angulo_lanzamiento":16.91,"dir_lanzamiento":-0.81,"retroceso":4800.19,"efecto_lat":696.0,"vel_rotacion":4850.38,"eje_rotacion":-8.25,"altura_max":17.14,"dist_vuelo":125.15,"ang_desv_vuelo":-3.99,"desv_vuelo":-8.71,"dist_total":138.07,"ang_desv_total":-4.26,"desv_total":-10.26},
+{"fecha":"24/4/26 8:31:29","palo":"Pitching Wedge","vel_palo":36.34,"angulo_ataque":-0.34,"linea_cabeza":5.52,"cara_palo":4.98,"cara_a_linea":-0.54,"vel_bola":39.57,"calidad":1.089,"angulo_lanzamiento":31.62,"dir_lanzamiento":4.78,"retroceso":9511.9,"efecto_lat":-66.41,"vel_rotacion":9512.13,"eje_rotacion":0.4,"altura_max":28.21,"dist_vuelo":96.08,"ang_desv_vuelo":4.96,"desv_vuelo":8.31,"dist_total":97.26,"ang_desv_total":4.96,"desv_total":8.41},
+{"fecha":"24/4/26 8:31:43","palo":"Pitching Wedge","vel_palo":38.29,"angulo_ataque":-2.25,"linea_cabeza":8.09,"cara_palo":4.87,"cara_a_linea":-3.22,"vel_bola":38.94,"calidad":1.017,"angulo_lanzamiento":35.84,"dir_lanzamiento":5.01,"retroceso":5248.43,"efecto_lat":191.53,"vel_rotacion":5251.92,"eje_rotacion":-2.09,"altura_max":30.76,"dist_vuelo":99.95,"ang_desv_vuelo":4.18,"desv_vuelo":7.28,"dist_total":105.6,"ang_desv_total":4.14,"desv_total":7.63},
+{"fecha":"24/4/26 8:32:03","palo":"Pitching Wedge","vel_palo":37.11,"angulo_ataque":0.3,"linea_cabeza":6.08,"cara_palo":-3.76,"cara_a_linea":-9.84,"vel_bola":42.9,"calidad":1.156,"angulo_lanzamiento":32.54,"dir_lanzamiento":-2.33,"retroceso":6074.76,"efecto_lat":991.51,"vel_rotacion":6155.14,"eje_rotacion":-9.27,"altura_max":33.67,"dist_vuelo":112.71,"ang_desv_vuelo":-6.56,"desv_vuelo":-12.88,"dist_total":117.63,"ang_desv_total":-6.68,"desv_total":-13.68},
+{"fecha":"24/4/26 8:32:22","palo":"Pitching Wedge","vel_palo":38.32,"angulo_ataque":-0.5,"linea_cabeza":7.16,"cara_palo":24.41,"cara_a_linea":17.25,"vel_bola":36.99,"calidad":0.965,"angulo_lanzamiento":20.66,"dir_lanzamiento":20.95,"retroceso":3625.16,"efecto_lat":-2226.73,"vel_rotacion":4254.42,"eje_rotacion":31.56,"altura_max":12.29,"dist_vuelo":91.65,"ang_desv_vuelo":29.62,"desv_vuelo":45.3,"dist_total":101.25,"ang_desv_total":29.85,"desv_total":50.39},
+{"fecha":"24/4/26 8:32:37","palo":"Pitching Wedge","vel_palo":36.47,"angulo_ataque":3.68,"linea_cabeza":9.66,"cara_palo":-4.63,"cara_a_linea":-14.29,"vel_bola":35.35,"calidad":0.969,"angulo_lanzamiento":26.49,"dir_lanzamiento":-2.59,"retroceso":5419.26,"efecto_lat":-352.35,"vel_rotacion":5430.7,"eje_rotacion":3.72,"altura_max":17.48,"dist_vuelo":90.85,"ang_desv_vuelo":-1.35,"desv_vuelo":-2.13,"dist_total":99.2,"ang_desv_total":-1.25,"desv_total":-2.17},
+{"fecha":"24/4/26 8:32:54","palo":"Pitching Wedge","vel_palo":36.78,"angulo_ataque":-0.9,"linea_cabeza":7.25,"cara_palo":-2.26,"cara_a_linea":-9.51,"vel_bola":38.99,"calidad":1.06,"angulo_lanzamiento":26.62,"dir_lanzamiento":-0.95,"retroceso":8654.39,"efecto_lat":2265.59,"vel_rotacion":8946.03,"eje_rotacion":-14.67,"altura_max":22.32,"dist_vuelo":98.24,"ang_desv_vuelo":-7.27,"desv_vuelo":-12.44,"dist_total":101.4,"ang_desv_total":-7.43,"desv_total":-13.11},
+{"fecha":"24/4/26 8:33:06","palo":"Pitching Wedge","vel_palo":37.1,"angulo_ataque":-1.61,"linea_cabeza":7.19,"cara_palo":8.1,"cara_a_linea":0.91,"vel_bola":35.53,"calidad":0.958,"angulo_lanzamiento":27.39,"dir_lanzamiento":7.55,"retroceso":7600.95,"efecto_lat":-265.43,"vel_rotacion":7605.58,"eje_rotacion":2.0,"altura_max":18.93,"dist_vuelo":88.74,"ang_desv_vuelo":8.3,"desv_vuelo":12.81,"dist_total":93.45,"ang_desv_total":8.33,"desv_total":13.54},
+{"fecha":"24/4/26 8:33:21","palo":"Pitching Wedge","vel_palo":36.04,"angulo_ataque":0.86,"linea_cabeza":8.67,"cara_palo":4.69,"cara_a_linea":-3.98,"vel_bola":39.32,"calidad":1.091,"angulo_lanzamiento":23.4,"dir_lanzamiento":4.93,"retroceso":7456.8,"efecto_lat":510.97,"vel_rotacion":7474.29,"eje_rotacion":-3.92,"altura_max":19.73,"dist_vuelo":102.54,"ang_desv_vuelo":3.32,"desv_vuelo":5.94,"dist_total":108.31,"ang_desv_total":3.25,"desv_total":6.14},
+{"fecha":"24/4/26 8:33:43","palo":"Pitching Wedge","vel_palo":36.26,"angulo_ataque":-1.47,"linea_cabeza":8.97,"cara_palo":1.94,"cara_a_linea":-7.03,"vel_bola":42.31,"calidad":1.167,"angulo_lanzamiento":19.21,"dir_lanzamiento":2.71,"retroceso":6900.66,"efecto_lat":563.7,"vel_rotacion":6923.65,"eje_rotacion":-4.67,"altura_max":18.53,"dist_vuelo":113.49,"ang_desv_vuelo":0.75,"desv_vuelo":1.48,"dist_total":121.29,"ang_desv_total":0.64,"desv_total":1.35},
+{"fecha":"24/4/26 8:33:58","palo":"Pitching Wedge","vel_palo":37.15,"angulo_ataque":-2.36,"linea_cabeza":10.21,"cara_palo":10.4,"cara_a_linea":0.19,"vel_bola":34.38,"calidad":0.925,"angulo_lanzamiento":30.49,"dir_lanzamiento":9.82,"retroceso":8523.31,"efecto_lat":-1096.4,"vel_rotacion":8593.54,"eje_rotacion":7.33,"altura_max":20.05,"dist_vuelo":82.63,"ang_desv_vuelo":12.59,"desv_vuelo":18.01,"dist_total":85.38,"ang_desv_total":12.66,"desv_total":18.71},
+{"fecha":"24/4/26 8:34:07","palo":"Pitching Wedge","vel_palo":37.3,"angulo_ataque":-0.95,"linea_cabeza":8.11,"cara_palo":0.52,"cara_a_linea":-7.59,"vel_bola":40.61,"calidad":1.089,"angulo_lanzamiento":24.89,"dir_lanzamiento":1.44,"retroceso":9094.88,"efecto_lat":699.81,"vel_rotacion":9121.77,"eje_rotacion":-4.4,"altura_max":23.13,"dist_vuelo":104.07,"ang_desv_vuelo":-0.56,"desv_vuelo":-1.01,"dist_total":107.2,"ang_desv_total":-0.6,"desv_total":-1.13},
+{"fecha":"24/4/26 8:36:28","palo":"Hierro 9","vel_palo":35.56,"angulo_ataque":0.44,"linea_cabeza":6.5,"cara_palo":-3.85,"cara_a_linea":-10.35,"vel_bola":41.42,"calidad":1.165,"angulo_lanzamiento":25.02,"dir_lanzamiento":-2.35,"retroceso":5235.67,"efecto_lat":2684.99,"vel_rotacion":5884.0,"eje_rotacion":-27.15,"altura_max":21.96,"dist_vuelo":110.8,"ang_desv_vuelo":-13.08,"desv_vuelo":-25.08,"dist_total":118.82,"ang_desv_total":-13.72,"desv_total":-28.19},
+{"fecha":"24/4/26 8:36:40","palo":"Hierro 9","vel_palo":37.08,"angulo_ataque":0.34,"linea_cabeza":7.87,"cara_palo":21.1,"cara_a_linea":13.23,"vel_bola":40.56,"calidad":1.094,"angulo_lanzamiento":8.96,"dir_lanzamiento":18.32,"retroceso":4213.66,"efecto_lat":-693.79,"vel_rotacion":4270.4,"eje_rotacion":9.35,"altura_max":5.12,"dist_vuelo":87.79,"ang_desv_vuelo":20.63,"desv_vuelo":30.93,"dist_total":124.27,"ang_desv_total":21.36,"desv_total":45.27},
+{"fecha":"24/4/26 8:36:46","palo":"Hierro 9","vel_palo":0.0,"angulo_ataque":0.0,"linea_cabeza":0.0,"cara_palo":null,"cara_a_linea":null,"vel_bola":0.0,"calidad":null,"angulo_lanzamiento":null,"dir_lanzamiento":-85.61,"retroceso":4213.66,"efecto_lat":-693.79,"vel_rotacion":4270.4,"eje_rotacion":9.35,"altura_max":0.0,"dist_vuelo":1.51,"ang_desv_vuelo":94.54,"desv_vuelo":1.51,"dist_total":0.1,"ang_desv_total":-79.2,"desv_total":-0.1},
+{"fecha":"24/4/26 8:37:04","palo":"Hierro 9","vel_palo":36.64,"angulo_ataque":-1.39,"linea_cabeza":8.75,"cara_palo":7.66,"cara_a_linea":-1.09,"vel_bola":41.0,"calidad":1.119,"angulo_lanzamiento":27.65,"dir_lanzamiento":7.38,"retroceso":9171.88,"efecto_lat":-270.61,"vel_rotacion":9175.87,"eje_rotacion":1.69,"altura_max":26.44,"dist_vuelo":103.85,"ang_desv_vuelo":8.17,"desv_vuelo":14.76,"dist_total":105.92,"ang_desv_total":8.18,"desv_total":15.08},
+{"fecha":"24/4/26 8:37:27","palo":"Hierro 9","vel_palo":36.64,"angulo_ataque":0.06,"linea_cabeza":5.68,"cara_palo":-5.23,"cara_a_linea":-10.91,"vel_bola":44.68,"calidad":1.219,"angulo_lanzamiento":25.98,"dir_lanzamiento":-3.58,"retroceso":7366.22,"efecto_lat":2406.23,"vel_rotacion":7749.27,"eje_rotacion":-18.09,"altura_max":28.65,"dist_vuelo":118.64,"ang_desv_vuelo":-12.33,"desv_vuelo":-25.34,"dist_total":122.97,"ang_desv_total":-12.56,"desv_total":-26.74},
+{"fecha":"24/4/26 8:37:38","palo":"Hierro 9","vel_palo":35.69,"angulo_ataque":-1.71,"linea_cabeza":6.82,"cara_palo":-1.1,"cara_a_linea":-7.92,"vel_bola":41.11,"calidad":1.152,"angulo_lanzamiento":24.28,"dir_lanzamiento":-0.05,"retroceso":8220.31,"efecto_lat":1456.86,"vel_rotacion":8348.41,"eje_rotacion":-10.05,"altura_max":22.81,"dist_vuelo":107.03,"ang_desv_vuelo":-4.54,"desv_vuelo":-8.48,"dist_total":111.1,"ang_desv_total":-4.67,"desv_total":-9.05},
+{"fecha":"24/4/26 8:37:52","palo":"Hierro 9","vel_palo":35.86,"angulo_ataque":1.14,"linea_cabeza":5.89,"cara_palo":5.21,"cara_a_linea":-0.68,"vel_bola":38.65,"calidad":1.078,"angulo_lanzamiento":28.82,"dir_lanzamiento":5.02,"retroceso":7384.24,"efecto_lat":652.53,"vel_rotacion":7413.02,"eje_rotacion":-5.05,"altura_max":24.09,"dist_vuelo":99.15,"ang_desv_vuelo":2.91,"desv_vuelo":5.03,"dist_total":103.34,"ang_desv_total":2.84,"desv_total":5.12},
+{"fecha":"24/4/26 8:38:17","palo":"Hierro 9","vel_palo":34.57,"angulo_ataque":2.02,"linea_cabeza":7.67,"cara_palo":-1.3,"cara_a_linea":-8.97,"vel_bola":41.91,"calidad":1.212,"angulo_lanzamiento":25.68,"dir_lanzamiento":-0.11,"retroceso":5185.59,"efecto_lat":1604.22,"vel_rotacion":5428.06,"eje_rotacion":-17.19,"altura_max":24.08,"dist_vuelo":115.05,"ang_desv_vuelo":-7.08,"desv_vuelo":-14.18,"dist_total":123.23,"ang_desv_total":-7.46,"desv_total":-16.01},
+{"fecha":"24/4/26 8:38:27","palo":"Hierro 9","vel_palo":37.49,"angulo_ataque":-0.89,"linea_cabeza":6.99,"cara_palo":-1.14,"cara_a_linea":-8.13,"vel_bola":44.22,"calidad":1.18,"angulo_lanzamiento":27.15,"dir_lanzamiento":-0.06,"retroceso":7947.27,"efecto_lat":1761.87,"vel_rotacion":8140.23,"eje_rotacion":-12.5,"altura_max":29.89,"dist_vuelo":115.87,"ang_desv_vuelo":-6.2,"desv_vuelo":-12.52,"dist_total":119.35,"ang_desv_total":-6.33,"desv_total":-13.15},
+{"fecha":"24/4/26 8:38:39","palo":"Hierro 9","vel_palo":36.84,"angulo_ataque":-0.45,"linea_cabeza":9.52,"cara_palo":3.15,"cara_a_linea":-6.37,"vel_bola":44.71,"calidad":1.214,"angulo_lanzamiento":13.47,"dir_lanzamiento":3.78,"retroceso":4283.92,"efecto_lat":540.42,"vel_rotacion":4317.87,"eje_rotacion":-7.19,"altura_max":12.47,"dist_vuelo":120.74,"ang_desv_vuelo":1.31,"desv_vuelo":2.77,"dist_total":137.4,"ang_desv_total":1.03,"desv_total":2.47},
+{"fecha":"24/4/26 8:39:05","palo":"Hierro 9","vel_palo":35.64,"angulo_ataque":-2.69,"linea_cabeza":6.77,"cara_palo":5.14,"cara_a_linea":-1.63,"vel_bola":42.22,"calidad":1.185,"angulo_lanzamiento":26.58,"dir_lanzamiento":5.07,"retroceso":8745.7,"efecto_lat":-245.82,"vel_rotacion":8749.15,"eje_rotacion":1.61,"altura_max":26.98,"dist_vuelo":109.05,"ang_desv_vuelo":5.83,"desv_vuelo":11.08,"dist_total":111.75,"ang_desv_total":5.85,"desv_total":11.38},
+{"fecha":"24/4/26 8:39:17","palo":"Hierro 9","vel_palo":35.73,"angulo_ataque":-0.52,"linea_cabeza":6.08,"cara_palo":2.57,"cara_a_linea":-3.51,"vel_bola":43.06,"calidad":1.205,"angulo_lanzamiento":27.74,"dir_lanzamiento":2.87,"retroceso":7577.76,"efecto_lat":419.68,"vel_rotacion":7589.37,"eje_rotacion":-3.17,"altura_max":29.17,"dist_vuelo":113.43,"ang_desv_vuelo":1.37,"desv_vuelo":2.72,"dist_total":117.44,"ang_desv_total":1.33,"desv_total":2.74},
+{"fecha":"24/4/26 8:39:56","palo":"Hierro 9","vel_palo":37.98,"angulo_ataque":-1.52,"linea_cabeza":5.67,"cara_palo":-1.15,"cara_a_linea":-6.82,"vel_bola":45.25,"calidad":1.191,"angulo_lanzamiento":23.79,"dir_lanzamiento":-0.23,"retroceso":8623.24,"efecto_lat":1559.34,"vel_rotacion":8763.09,"eje_rotacion":-10.25,"altura_max":27.73,"dist_vuelo":119.52,"ang_desv_vuelo":-5.4,"desv_vuelo":-11.24,"dist_total":122.77,"ang_desv_total":-5.49,"desv_total":-11.75},
+{"fecha":"24/4/26 8:40:09","palo":"Hierro 9","vel_palo":37.05,"angulo_ataque":-0.31,"linea_cabeza":10.67,"cara_palo":-1.76,"cara_a_linea":-12.43,"vel_bola":41.86,"calidad":1.13,"angulo_lanzamiento":25.7,"dir_lanzamiento":-0.11,"retroceso":3930.83,"efecto_lat":-539.85,"vel_rotacion":3967.73,"eje_rotacion":7.82,"altura_max":23.81,"dist_vuelo":119.92,"ang_desv_vuelo":2.77,"desv_vuelo":5.8,"dist_total":131.04,"ang_desv_total":2.98,"desv_total":6.8},
+{"fecha":"24/4/26 8:40:35","palo":"Hierro 9","vel_palo":37.79,"angulo_ataque":-2.69,"linea_cabeza":6.69,"cara_palo":9.27,"cara_a_linea":2.58,"vel_bola":39.82,"calidad":1.054,"angulo_lanzamiento":22.5,"dir_lanzamiento":8.45,"retroceso":8000.06,"efecto_lat":-2345.45,"vel_rotacion":8336.79,"eje_rotacion":16.34,"altura_max":19.09,"dist_vuelo":102.26,"ang_desv_vuelo":15.29,"desv_vuelo":26.96,"dist_total":107.42,"ang_desv_total":15.56,"desv_total":28.82},
+{"fecha":"24/4/26 8:40:46","palo":"Hierro 9","vel_palo":35.91,"angulo_ataque":0.48,"linea_cabeza":6.85,"cara_palo":3.24,"cara_a_linea":-3.61,"vel_bola":41.18,"calidad":1.147,"angulo_lanzamiento":28.32,"dir_lanzamiento":3.52,"retroceso":7449.35,"efecto_lat":1102.68,"vel_rotacion":7530.52,"eje_rotacion":-8.42,"altura_max":26.97,"dist_vuelo":107.28,"ang_desv_vuelo":-0.27,"desv_vuelo":-0.51,"dist_total":111.39,"ang_desv_total":-0.38,"desv_total":-0.73},
+{"fecha":"24/4/26 8:41:01","palo":"Hierro 9","vel_palo":36.32,"angulo_ataque":0.07,"linea_cabeza":8.67,"cara_palo":3.88,"cara_a_linea":-4.79,"vel_bola":42.0,"calidad":1.156,"angulo_lanzamiento":26.55,"dir_lanzamiento":4.27,"retroceso":6419.58,"efecto_lat":1199.07,"vel_rotacion":6530.6,"eje_rotacion":-10.58,"altura_max":25.92,"dist_vuelo":112.91,"ang_desv_vuelo":-0.35,"desv_vuelo":-0.7,"dist_total":118.94,"ang_desv_total":-0.53,"desv_total":-1.11},
+{"fecha":"24/4/26 8:41:22","palo":"Hierro 9","vel_palo":34.61,"angulo_ataque":3.22,"linea_cabeza":8.65,"cara_palo":0.63,"cara_a_linea":-8.02,"vel_bola":39.39,"calidad":1.138,"angulo_lanzamiento":25.38,"dir_lanzamiento":1.6,"retroceso":3975.55,"efecto_lat":1090.57,"vel_rotacion":4122.42,"eje_rotacion":-15.34,"altura_max":20.23,"dist_vuelo":108.68,"ang_desv_vuelo":-3.64,"desv_vuelo":-6.89,"dist_total":120.02,"ang_desv_total":-4.07,"desv_total":-8.52},
+{"fecha":"24/4/26 8:42:25","palo":"Hierro 9","vel_palo":34.84,"angulo_ataque":5.24,"linea_cabeza":5.96,"cara_palo":2.61,"cara_a_linea":-3.35,"vel_bola":36.7,"calidad":1.053,"angulo_lanzamiento":23.81,"dir_lanzamiento":2.89,"retroceso":3969.07,"efecto_lat":690.57,"vel_rotacion":4028.7,"eje_rotacion":-9.87,"altura_max":15.91,"dist_vuelo":97.31,"ang_desv_vuelo":-0.11,"desv_vuelo":-0.19,"dist_total":109.79,"ang_desv_total":-0.43,"desv_total":-0.81},
+{"fecha":"24/4/26 8:42:35","palo":"Hierro 9","vel_palo":35.83,"angulo_ataque":2.2,"linea_cabeza":5.88,"cara_palo":-2.05,"cara_a_linea":-7.93,"vel_bola":35.6,"calidad":0.994,"angulo_lanzamiento":23.25,"dir_lanzamiento":-0.95,"retroceso":3453.29,"efecto_lat":2752.78,"vel_rotacion":4416.22,"eje_rotacion":-38.56,"altura_max":12.92,"dist_vuelo":86.9,"ang_desv_vuelo":-11.27,"desv_vuelo":-16.98,"dist_total":99.65,"ang_desv_total":-12.59,"desv_total":-21.71},
+{"fecha":"24/4/26 8:42:46","palo":"Hierro 9","vel_palo":36.55,"angulo_ataque":-2.61,"linea_cabeza":6.18,"cara_palo":4.22,"cara_a_linea":-1.96,"vel_bola":44.88,"calidad":1.228,"angulo_lanzamiento":15.75,"dir_lanzamiento":4.24,"retroceso":5675.2,"efecto_lat":-758.24,"vel_rotacion":5725.63,"eje_rotacion":7.61,"altura_max":16.46,"dist_vuelo":123.05,"ang_desv_vuelo":7.32,"desv_vuelo":15.69,"dist_total":134.48,"ang_desv_total":7.56,"desv_total":17.68},
+{"fecha":"24/4/26 8:43:04","palo":"Hierro 9","vel_palo":37.75,"angulo_ataque":-2.79,"linea_cabeza":6.11,"cara_palo":7.72,"cara_a_linea":1.61,"vel_bola":39.21,"calidad":1.039,"angulo_lanzamiento":28.0,"dir_lanzamiento":7.11,"retroceso":9573.95,"efecto_lat":-911.75,"vel_rotacion":9617.27,"eje_rotacion":5.44,"altura_max":24.33,"dist_vuelo":97.39,"ang_desv_vuelo":9.55,"desv_vuelo":16.15,"dist_total":99.35,"ang_desv_total":9.58,"desv_total":16.53},
+{"fecha":"24/4/26 8:43:17","palo":"Hierro 9","vel_palo":36.54,"angulo_ataque":-0.37,"linea_cabeza":6.72,"cara_palo":0.41,"cara_a_linea":-6.31,"vel_bola":39.89,"calidad":1.092,"angulo_lanzamiento":26.28,"dir_lanzamiento":1.18,"retroceso":5419.06,"efecto_lat":1095.63,"vel_rotacion":5528.71,"eje_rotacion":-11.43,"altura_max":22.53,"dist_vuelo":107.69,"ang_desv_vuelo":-3.28,"desv_vuelo":-6.16,"dist_total":115.7,"ang_desv_total":-3.54,"desv_total":-7.14},
+{"fecha":"24/4/26 8:43:32","palo":"Hierro 9","vel_palo":37.88,"angulo_ataque":-2.1,"linea_cabeza":6.17,"cara_palo":6.98,"cara_a_linea":0.81,"vel_bola":40.66,"calidad":1.073,"angulo_lanzamiento":27.32,"dir_lanzamiento":6.5,"retroceso":9503.14,"efecto_lat":-1045.8,"vel_rotacion":9560.51,"eje_rotacion":6.28,"altura_max":25.62,"dist_vuelo":102.28,"ang_desv_vuelo":9.43,"desv_vuelo":16.75,"dist_total":104.29,"ang_desv_total":9.47,"desv_total":17.15},
+{"fecha":"24/4/26 8:43:58","palo":"Hierro 9","vel_palo":37.39,"angulo_ataque":-1.19,"linea_cabeza":5.7,"cara_palo":null,"cara_a_linea":null,"vel_bola":33.82,"calidad":0.905,"angulo_lanzamiento":25.12,"dir_lanzamiento":25.63,"retroceso":4931.79,"efecto_lat":-658.04,"vel_rotacion":4975.5,"eje_rotacion":7.6,"altura_max":14.53,"dist_vuelo":84.77,"ang_desv_vuelo":27.91,"desv_vuelo":39.68,"dist_total":94.49,"ang_desv_total":27.41,"desv_total":43.5},
+{"fecha":"24/4/26 8:44:12","palo":"Hierro 9","vel_palo":37.23,"angulo_ataque":-2.16,"linea_cabeza":6.46,"cara_palo":2.87,"cara_a_linea":-3.59,"vel_bola":44.89,"calidad":1.206,"angulo_lanzamiento":25.31,"dir_lanzamiento":3.17,"retroceso":8594.16,"efecto_lat":994.38,"vel_rotacion":8651.5,"eje_rotacion":-6.6,"altura_max":29.16,"dist_vuelo":117.99,"ang_desv_vuelo":-0.16,"desv_vuelo":-0.33,"dist_total":121.03,"ang_desv_total":-0.22,"desv_total":-0.46},
+{"fecha":"24/4/26 8:45:14","palo":"Hierro 9","vel_palo":37.43,"angulo_ataque":-0.57,"linea_cabeza":7.47,"cara_palo":-2.24,"cara_a_linea":-9.71,"vel_bola":37.36,"calidad":0.998,"angulo_lanzamiento":24.32,"dir_lanzamiento":-0.91,"retroceso":4668.26,"efecto_lat":1495.22,"vel_rotacion":4901.87,"eje_rotacion":-17.76,"altura_max":17.13,"dist_vuelo":98.16,"ang_desv_vuelo":-6.82,"desv_vuelo":-11.66,"dist_total":108.42,"ang_desv_total":-7.32,"desv_total":-13.81},
+{"fecha":"24/4/26 8:45:22","palo":"Hierro 9","vel_palo":32.95,"angulo_ataque":8.59,"linea_cabeza":6.83,"cara_palo":-0.61,"cara_a_linea":-7.44,"vel_bola":37.58,"calidad":1.141,"angulo_lanzamiento":25.1,"dir_lanzamiento":0.36,"retroceso":4110.29,"efecto_lat":2540.55,"vel_rotacion":4832.07,"eje_rotacion":-31.72,"altura_max":17.08,"dist_vuelo":97.24,"ang_desv_vuelo":-9.81,"desv_vuelo":-16.57,"dist_total":107.7,"ang_desv_total":-10.75,"desv_total":-20.08},
+{"fecha":"24/4/26 8:45:32","palo":"Hierro 9","vel_palo":36.98,"angulo_ataque":-0.89,"linea_cabeza":4.39,"cara_palo":2.05,"cara_a_linea":-2.34,"vel_bola":43.79,"calidad":1.184,"angulo_lanzamiento":26.71,"dir_lanzamiento":2.23,"retroceso":9306.77,"efecto_lat":8.12,"vel_rotacion":9306.77,"eje_rotacion":-0.05,"altura_max":29.39,"dist_vuelo":112.38,"ang_desv_vuelo":2.21,"desv_vuelo":4.33,"dist_total":114.41,"ang_desv_total":2.21,"desv_total":4.41},
+{"fecha":"24/4/26 8:45:50","palo":"Hierro 9","vel_palo":37.64,"angulo_ataque":-1.88,"linea_cabeza":7.39,"cara_palo":3.41,"cara_a_linea":-3.98,"vel_bola":42.43,"calidad":1.127,"angulo_lanzamiento":25.15,"dir_lanzamiento":3.73,"retroceso":8851.11,"efecto_lat":428.25,"vel_rotacion":8861.46,"eje_rotacion":-2.77,"altura_max":25.76,"dist_vuelo":110.18,"ang_desv_vuelo":2.41,"desv_vuelo":4.64,"dist_total":113.08,"ang_desv_total":2.39,"desv_total":4.71},
+{"fecha":"24/4/26 8:46:01","palo":"Hierro 9","vel_palo":38.34,"angulo_ataque":-1.85,"linea_cabeza":6.62,"cara_palo":-1.02,"cara_a_linea":-7.64,"vel_bola":44.72,"calidad":1.166,"angulo_lanzamiento":22.0,"dir_lanzamiento":-0.01,"retroceso":8358.98,"efecto_lat":1991.39,"vel_rotacion":8592.91,"eje_rotacion":-13.4,"altura_max":24.69,"dist_vuelo":118.66,"ang_desv_vuelo":-6.52,"desv_vuelo":-13.48,"dist_total":122.74,"ang_desv_total":-6.69,"desv_total":-14.3},
+{"fecha":"24/4/26 8:46:12","palo":"Hierro 9","vel_palo":38.42,"angulo_ataque":-1.08,"linea_cabeza":5.56,"cara_palo":4.54,"cara_a_linea":-1.02,"vel_bola":41.36,"calidad":1.077,"angulo_lanzamiento":26.46,"dir_lanzamiento":4.43,"retroceso":8391.59,"efecto_lat":-856.83,"vel_rotacion":8435.22,"eje_rotacion":5.83,"altura_max":25.56,"dist_vuelo":107.03,"ang_desv_vuelo":7.11,"desv_vuelo":13.25,"dist_total":110.21,"ang_desv_total":7.17,"desv_total":13.75},
+{"fecha":"24/4/26 8:46:29","palo":"Hierro 9","vel_palo":33.23,"angulo_ataque":4.92,"linea_cabeza":6.79,"cara_palo":-4.44,"cara_a_linea":-11.23,"vel_bola":38.35,"calidad":1.154,"angulo_lanzamiento":21.07,"dir_lanzamiento":-2.8,"retroceso":2925.6,"efecto_lat":3295.19,"vel_rotacion":4406.52,"eje_rotacion":-48.4,"altura_max":12.22,"dist_vuelo":92.06,"ang_desv_vuelo":-15.41,"desv_vuelo":-24.46,"dist_total":106.02,"ang_desv_total":-17.14,"desv_total":-31.25},
+{"fecha":"24/4/26 8:46:38","palo":"Hierro 9","vel_palo":36.01,"angulo_ataque":0.36,"linea_cabeza":7.02,"cara_palo":4.93,"cara_a_linea":-2.09,"vel_bola":41.9,"calidad":1.164,"angulo_lanzamiento":28.7,"dir_lanzamiento":4.93,"retroceso":5733.2,"efecto_lat":278.39,"vel_rotacion":5739.96,"eje_rotacion":-2.78,"altura_max":28.13,"dist_vuelo":113.8,"ang_desv_vuelo":3.74,"desv_vuelo":7.42,"dist_total":120.41,"ang_desv_total":3.69,"desv_total":7.74},
+{"fecha":"24/4/26 8:46:52","palo":"Hierro 9","vel_palo":37.19,"angulo_ataque":1.14,"linea_cabeza":8.21,"cara_palo":-1.07,"cara_a_linea":-9.28,"vel_bola":41.17,"calidad":1.107,"angulo_lanzamiento":23.12,"dir_lanzamiento":0.15,"retroceso":6910.76,"efecto_lat":2755.72,"vel_rotacion":7439.93,"eje_rotacion":-21.74,"altura_max":20.62,"dist_vuelo":107.8,"ang_desv_vuelo":-8.99,"desv_vuelo":-16.85,"dist_total":113.79,"ang_desv_total":-9.4,"desv_total":-18.59},
+{"fecha":"24/4/26 8:47:04","palo":"Hierro 9","vel_palo":37.68,"angulo_ataque":-1.07,"linea_cabeza":7.47,"cara_palo":5.52,"cara_a_linea":-1.95,"vel_bola":42.69,"calidad":1.133,"angulo_lanzamiento":24.07,"dir_lanzamiento":5.47,"retroceso":9008.83,"efecto_lat":399.64,"vel_rotacion":9017.69,"eje_rotacion":-2.54,"altura_max":24.99,"dist_vuelo":111.19,"ang_desv_vuelo":4.25,"desv_vuelo":8.25,"dist_total":114.39,"ang_desv_total":4.23,"desv_total":8.43},
+{"fecha":"24/4/26 8:47:36","palo":"Hierro 8","vel_palo":33.23,"angulo_ataque":7.17,"linea_cabeza":6.17,"cara_palo":0.7,"cara_a_linea":-5.47,"vel_bola":38.86,"calidad":1.169,"angulo_lanzamiento":23.02,"dir_lanzamiento":1.35,"retroceso":3777.42,"efecto_lat":1262.44,"vel_rotacion":3982.8,"eje_rotacion":-18.48,"altura_max":16.98,"dist_vuelo":105.34,"ang_desv_vuelo":-4.53,"desv_vuelo":-8.31,"dist_total":118.33,"ang_desv_total":-5.12,"desv_total":-10.56},
+{"fecha":"24/4/26 8:47:46","palo":"Hierro 8","vel_palo":36.87,"angulo_ataque":2.04,"linea_cabeza":4.88,"cara_palo":-2.02,"cara_a_linea":-6.9,"vel_bola":45.27,"calidad":1.228,"angulo_lanzamiento":18.34,"dir_lanzamiento":-1.04,"retroceso":6321.12,"efecto_lat":1180.68,"vel_rotacion":6430.44,"eje_rotacion":-10.58,"altura_max":20.34,"dist_vuelo":124.87,"ang_desv_vuelo":-5.7,"desv_vuelo":-12.41,"dist_total":133.58,"ang_desv_total":-5.96,"desv_total":-13.87},
+{"fecha":"24/4/26 8:47:56","palo":"Hierro 8","vel_palo":38.13,"angulo_ataque":1.95,"linea_cabeza":2.04,"cara_palo":-1.92,"cara_a_linea":-3.96,"vel_bola":44.68,"calidad":1.172,"angulo_lanzamiento":19.65,"dir_lanzamiento":-1.33,"retroceso":7093.28,"efecto_lat":1404.51,"vel_rotacion":7230.99,"eje_rotacion":-11.2,"altura_max":21.58,"dist_vuelo":121.4,"ang_desv_vuelo":-6.42,"desv_vuelo":-13.58,"dist_total":128.24,"ang_desv_total":-6.65,"desv_total":-14.84},
+{"fecha":"24/4/26 8:48:18","palo":"Hierro 8","vel_palo":37.99,"angulo_ataque":4.16,"linea_cabeza":5.5,"cara_palo":3.57,"cara_a_linea":-1.93,"vel_bola":45.45,"calidad":1.196,"angulo_lanzamiento":21.08,"dir_lanzamiento":3.62,"retroceso":7262.87,"efecto_lat":-72.26,"vel_rotacion":7263.23,"eje_rotacion":0.57,"altura_max":24.64,"dist_vuelo":124.59,"ang_desv_vuelo":3.89,"desv_vuelo":8.46,"dist_total":130.71,"ang_desv_total":3.9,"desv_total":8.9},
+{"fecha":"24/4/26 8:48:31","palo":"Hierro 8","vel_palo":0.0,"angulo_ataque":0.0,"linea_cabeza":0.0,"cara_palo":3.76,"cara_a_linea":3.76,"vel_bola":38.82,"calidad":null,"angulo_lanzamiento":22.05,"dir_lanzamiento":3.09,"retroceso":3084.99,"efecto_lat":1326.69,"vel_rotacion":3358.17,"eje_rotacion":-23.27,"altura_max":15.3,"dist_vuelo":104.64,"ang_desv_vuelo":-3.55,"desv_vuelo":-6.48,"dist_total":119.99,"ang_desv_total":-4.36,"desv_total":-9.12},
+{"fecha":"24/4/26 8:48:51","palo":"Hierro 8","vel_palo":0.0,"angulo_ataque":0.0,"linea_cabeza":0.0,"cara_palo":-3.18,"cara_a_linea":-3.18,"vel_bola":36.53,"calidad":null,"angulo_lanzamiento":17.35,"dir_lanzamiento":-2.61,"retroceso":1963.34,"efecto_lat":2976.43,"vel_rotacion":3565.65,"eje_rotacion":-56.59,"altura_max":7.28,"dist_vuelo":75.8,"ang_desv_vuelo":-12.87,"desv_vuelo":-16.89,"dist_total":106.14,"ang_desv_total":-15.89,"desv_total":-29.07},
+{"fecha":"24/4/26 8:49:06","palo":"Hierro 8","vel_palo":38.38,"angulo_ataque":3.95,"linea_cabeza":6.45,"cara_palo":3.44,"cara_a_linea":-3.01,"vel_bola":34.88,"calidad":0.909,"angulo_lanzamiento":16.78,"dir_lanzamiento":3.64,"retroceso":4763.91,"efecto_lat":-1446.48,"vel_rotacion":4978.67,"eje_rotacion":16.89,"altura_max":8.55,"dist_vuelo":80.53,"ang_desv_vuelo":8.08,"desv_vuelo":11.32,"dist_total":97.39,"ang_desv_total":8.81,"desv_total":14.92},
+{"fecha":"24/4/26 8:49:24","palo":"Hierro 8","vel_palo":39.27,"angulo_ataque":2.22,"linea_cabeza":9.28,"cara_palo":9.85,"cara_a_linea":0.57,"vel_bola":44.74,"calidad":1.139,"angulo_lanzamiento":19.83,"dir_lanzamiento":9.25,"retroceso":6935.8,"efecto_lat":-1507.18,"vel_rotacion":7097.67,"eje_rotacion":12.26,"altura_max":21.74,"dist_vuelo":121.84,"ang_desv_vuelo":14.82,"desv_vuelo":31.16,"dist_total":128.85,"ang_desv_total":15.06,"desv_total":33.48},
+{"fecha":"24/4/26 8:49:37","palo":"Hierro 8","vel_palo":38.14,"angulo_ataque":3.92,"linea_cabeza":5.81,"cara_palo":4.24,"cara_a_linea":-1.57,"vel_bola":45.46,"calidad":1.192,"angulo_lanzamiento":25.63,"dir_lanzamiento":4.21,"retroceso":8449.87,"efecto_lat":-112.09,"vel_rotacion":8450.61,"eje_rotacion":0.76,"altura_max":30.43,"dist_vuelo":120.01,"ang_desv_vuelo":4.59,"desv_vuelo":9.61,"dist_total":123.28,"ang_desv_total":4.6,"desv_total":9.89},
+{"fecha":"24/4/26 8:49:59","palo":"Hierro 8","vel_palo":37.41,"angulo_ataque":2.69,"linea_cabeza":-4.92,"cara_palo":-0.73,"cara_a_linea":4.19,"vel_bola":47.18,"calidad":1.261,"angulo_lanzamiento":20.43,"dir_lanzamiento":-1.21,"retroceso":7159.13,"efecto_lat":1164.65,"vel_rotacion":7253.24,"eje_rotacion":-9.24,"altura_max":25.74,"dist_vuelo":130.33,"ang_desv_vuelo":-5.75,"desv_vuelo":-13.06,"dist_total":136.65,"ang_desv_total":-5.91,"desv_total":-14.08},
+{"fecha":"24/4/26 8:50:08","palo":"Hierro 8","vel_palo":38.06,"angulo_ataque":3.18,"linea_cabeza":3.24,"cara_palo":1.49,"cara_a_linea":-1.75,"vel_bola":45.98,"calidad":1.208,"angulo_lanzamiento":19.64,"dir_lanzamiento":1.63,"retroceso":6873.03,"efecto_lat":-52.78,"vel_rotacion":6873.23,"eje_rotacion":0.44,"altura_max":23.34,"dist_vuelo":127.34,"ang_desv_vuelo":1.83,"desv_vuelo":4.07,"dist_total":134.5,"ang_desv_total":1.84,"desv_total":4.32},
+{"fecha":"24/4/26 8:50:21","palo":"Hierro 8","vel_palo":38.62,"angulo_ataque":1.81,"linea_cabeza":5.29,"cara_palo":0.78,"cara_a_linea":-4.51,"vel_bola":45.87,"calidad":1.188,"angulo_lanzamiento":17.07,"dir_lanzamiento":1.3,"retroceso":6587.33,"efecto_lat":-951.6,"vel_rotacion":6655.71,"eje_rotacion":8.22,"altura_max":19.66,"dist_vuelo":126.32,"ang_desv_vuelo":4.98,"desv_vuelo":10.96,"dist_total":135.02,"ang_desv_total":5.18,"desv_total":12.19},
+{"fecha":"24/4/26 8:50:56","palo":"Hierro 8","vel_palo":37.99,"angulo_ataque":1.15,"linea_cabeza":8.2,"cara_palo":7.14,"cara_a_linea":-1.06,"vel_bola":48.33,"calidad":1.272,"angulo_lanzamiento":23.63,"dir_lanzamiento":6.9,"retroceso":6126.13,"efecto_lat":-167.91,"vel_rotacion":6128.43,"eje_rotacion":1.57,"altura_max":31.32,"dist_vuelo":136.9,"ang_desv_vuelo":7.67,"desv_vuelo":18.27,"dist_total":143.75,"ang_desv_total":7.69,"desv_total":19.24},
+{"fecha":"24/4/26 8:51:14","palo":"Hierro 7","vel_palo":38.56,"angulo_ataque":-0.94,"linea_cabeza":8.94,"cara_palo":-2.14,"cara_a_linea":-11.08,"vel_bola":46.75,"calidad":1.212,"angulo_lanzamiento":18.61,"dir_lanzamiento":-0.64,"retroceso":4550.86,"efecto_lat":1821.14,"vel_rotacion":4901.72,"eje_rotacion":-21.81,"altura_max":20.38,"dist_vuelo":132.53,"ang_desv_vuelo":-9.48,"desv_vuelo":-21.82,"dist_total":144.41,"ang_desv_total":-10.14,"desv_total":-25.43},
+{"fecha":"24/4/26 8:51:24","palo":"Hierro 7","vel_palo":37.25,"angulo_ataque":0.27,"linea_cabeza":6.52,"cara_palo":13.72,"cara_a_linea":7.2,"vel_bola":37.46,"calidad":1.006,"angulo_lanzamiento":19.64,"dir_lanzamiento":12.09,"retroceso":3647.83,"efecto_lat":-907.48,"vel_rotacion":3759.01,"eje_rotacion":13.97,"altura_max":12.48,"dist_vuelo":96.8,"ang_desv_vuelo":16.01,"desv_vuelo":26.7,"dist_total":112.35,"ang_desv_total":16.51,"desv_total":31.93},
+{"fecha":"24/4/26 8:51:54","palo":"Hierro 7","vel_palo":37.24,"angulo_ataque":-1.6,"linea_cabeza":8.21,"cara_palo":7.69,"cara_a_linea":-0.52,"vel_bola":45.71,"calidad":1.227,"angulo_lanzamiento":16.76,"dir_lanzamiento":7.34,"retroceso":5659.74,"efecto_lat":-1130.93,"vel_rotacion":5771.62,"eje_rotacion":11.3,"altura_max":18.42,"dist_vuelo":126.84,"ang_desv_vuelo":12.09,"desv_vuelo":26.57,"dist_total":137.45,"ang_desv_total":12.41,"desv_total":29.54},
+{"fecha":"24/4/26 8:52:12","palo":"Hierro 7","vel_palo":38.06,"angulo_ataque":0.85,"linea_cabeza":8.84,"cara_palo":3.0,"cara_a_linea":-5.84,"vel_bola":44.85,"calidad":1.178,"angulo_lanzamiento":20.65,"dir_lanzamiento":3.57,"retroceso":4833.27,"efecto_lat":995.64,"vel_rotacion":4934.75,"eje_rotacion":-11.64,"altura_max":21.83,"dist_vuelo":127.71,"ang_desv_vuelo":-1.18,"desv_vuelo":-2.63,"dist_total":138.42,"ang_desv_total":-1.5,"desv_total":-3.62},
+{"fecha":"24/4/26 8:52:28","palo":"Hierro 7","vel_palo":37.81,"angulo_ataque":2.67,"linea_cabeza":8.21,"cara_palo":0.36,"cara_a_linea":-7.85,"vel_bola":45.57,"calidad":1.205,"angulo_lanzamiento":21.08,"dir_lanzamiento":1.32,"retroceso":3680.06,"efecto_lat":1879.13,"vel_rotacion":4132.07,"eje_rotacion":-27.05,"altura_max":21.16,"dist_vuelo":130.46,"ang_desv_vuelo":-8.75,"desv_vuelo":-19.85,"dist_total":143.39,"ang_desv_total":-9.6,"desv_total":-23.92},
+{"fecha":"24/4/26 8:52:46","palo":"Hierro 7","vel_palo":37.9,"angulo_ataque":-0.9,"linea_cabeza":5.15,"cara_palo":-1.35,"cara_a_linea":-6.5,"vel_bola":43.2,"calidad":1.14,"angulo_lanzamiento":19.74,"dir_lanzamiento":-0.47,"retroceso":4376.36,"efecto_lat":1159.55,"vel_rotacion":4527.37,"eje_rotacion":-14.84,"altura_max":18.41,"dist_vuelo":120.99,"ang_desv_vuelo":-5.95,"desv_vuelo":-12.54,"dist_total":133.64,"ang_desv_total":-6.42,"desv_total":-14.94},
+{"fecha":"24/4/26 8:53:00","palo":"Hierro 7","vel_palo":37.05,"angulo_ataque":0.19,"linea_cabeza":10.4,"cara_palo":-1.64,"cara_a_linea":-12.04,"vel_bola":36.75,"calidad":0.992,"angulo_lanzamiento":15.26,"dir_lanzamiento":-0.04,"retroceso":1108.47,"efecto_lat":1944.94,"vel_rotacion":2238.64,"eje_rotacion":-60.32,"altura_max":5.47,"dist_vuelo":70.12,"ang_desv_vuelo":-7.58,"desv_vuelo":-9.25,"dist_total":110.48,"ang_desv_total":-10.41,"desv_total":-19.96},
+{"fecha":"24/4/26 8:53:15","palo":"Hierro 7","vel_palo":36.96,"angulo_ataque":0.65,"linea_cabeza":7.7,"cara_palo":2.69,"cara_a_linea":-5.01,"vel_bola":44.08,"calidad":1.193,"angulo_lanzamiento":20.5,"dir_lanzamiento":3.18,"retroceso":5276.11,"efecto_lat":1338.98,"vel_rotacion":5443.36,"eje_rotacion":-14.24,"altura_max":20.88,"dist_vuelo":122.88,"ang_desv_vuelo":-2.67,"desv_vuelo":-5.72,"dist_total":132.79,"ang_desv_total":-3.05,"desv_total":-7.06},
+{"fecha":"24/4/26 8:54:16","palo":"Hierro 7","vel_palo":36.06,"angulo_ataque":2.12,"linea_cabeza":5.18,"cara_palo":-1.52,"cara_a_linea":-6.7,"vel_bola":46.93,"calidad":1.301,"angulo_lanzamiento":20.69,"dir_lanzamiento":-0.6,"retroceso":3400.17,"efecto_lat":625.27,"vel_rotacion":3457.18,"eje_rotacion":-10.42,"altura_max":23.05,"dist_vuelo":142.02,"ang_desv_vuelo":-4.49,"desv_vuelo":-11.12,"dist_total":156.09,"ang_desv_total":-4.8,"desv_total":-13.06},
+{"fecha":"24/4/26 8:54:29","palo":"Hierro 7","vel_palo":38.76,"angulo_ataque":1.38,"linea_cabeza":7.95,"cara_palo":-0.1,"cara_a_linea":-8.05,"vel_bola":44.48,"calidad":1.148,"angulo_lanzamiento":19.27,"dir_lanzamiento":0.92,"retroceso":4660.4,"efecto_lat":1734.11,"vel_rotacion":4972.57,"eje_rotacion":-20.41,"altura_max":19.01,"dist_vuelo":123.85,"ang_desv_vuelo":-7.01,"desv_vuelo":-15.12,"dist_total":135.5,"ang_desv_total":-7.63,"desv_total":-18.0},
+{"fecha":"24/4/26 8:54:42","palo":"Hierro 7","vel_palo":38.69,"angulo_ataque":-1.2,"linea_cabeza":7.07,"cara_palo":4.7,"cara_a_linea":-2.37,"vel_bola":49.86,"calidad":1.289,"angulo_lanzamiento":20.64,"dir_lanzamiento":4.75,"retroceso":7131.03,"efecto_lat":74.68,"vel_rotacion":7131.42,"eje_rotacion":-0.6,"altura_max":29.82,"dist_vuelo":139.75,"ang_desv_vuelo":4.44,"desv_vuelo":10.81,"dist_total":145.83,"ang_desv_total":4.42,"desv_total":11.25},
+{"fecha":"24/4/26 8:55:20","palo":"Hierro 6","vel_palo":39.93,"angulo_ataque":1.84,"linea_cabeza":7.29,"cara_palo":8.56,"cara_a_linea":1.27,"vel_bola":51.1,"calidad":1.28,"angulo_lanzamiento":21.09,"dir_lanzamiento":7.94,"retroceso":5442.09,"efecto_lat":-552.79,"vel_rotacion":5470.09,"eje_rotacion":5.8,"altura_max":31.13,"dist_vuelo":149.9,"ang_desv_vuelo":10.82,"desv_vuelo":28.15,"dist_total":158.42,"ang_desv_total":10.94,"desv_total":30.06},
+{"fecha":"24/4/26 8:55:30","palo":"Hierro 6","vel_palo":38.96,"angulo_ataque":1.91,"linea_cabeza":3.16,"cara_palo":6.64,"cara_a_linea":3.48,"vel_bola":50.04,"calidad":1.284,"angulo_lanzamiento":20.23,"dir_lanzamiento":5.85,"retroceso":6014.92,"efecto_lat":-284.71,"vel_rotacion":6021.65,"eje_rotacion":2.71,"altura_max":28.89,"dist_vuelo":144.2,"ang_desv_vuelo":7.2,"desv_vuelo":18.07,"dist_total":152.08,"ang_desv_total":7.25,"desv_total":19.18},
+{"fecha":"24/4/26 8:56:32","palo":"Hierro 6","vel_palo":42.62,"angulo_ataque":null,"linea_cabeza":null,"cara_palo":null,"cara_a_linea":null,"vel_bola":51.53,"calidad":1.209,"angulo_lanzamiento":17.29,"dir_lanzamiento":-2.83,"retroceso":3899.36,"efecto_lat":1674.49,"vel_rotacion":4243.69,"eje_rotacion":-23.24,"altura_max":22.85,"dist_vuelo":153.24,"ang_desv_vuelo":-12.57,"desv_vuelo":-33.34,"dist_total":166.72,"ang_desv_total":-13.29,"desv_total":-38.33},
+{"fecha":"24/4/26 8:56:55","palo":"Hierro 6","vel_palo":39.0,"angulo_ataque":-0.63,"linea_cabeza":5.4,"cara_palo":0.75,"cara_a_linea":-4.65,"vel_bola":37.13,"calidad":0.952,"angulo_lanzamiento":13.52,"dir_lanzamiento":1.29,"retroceso":535.65,"efecto_lat":1130.62,"vel_rotacion":1251.09,"eje_rotacion":-64.65,"altura_max":4.1,"dist_vuelo":63.71,"ang_desv_vuelo":-3.27,"desv_vuelo":-3.63,"dist_total":113.51,"ang_desv_total":-5.29,"desv_total":-10.46},
+{"fecha":"24/4/26 8:57:13","palo":"Hierro 6","vel_palo":38.41,"angulo_ataque":0.73,"linea_cabeza":6.9,"cara_palo":4.75,"cara_a_linea":-2.15,"vel_bola":49.04,"calidad":1.277,"angulo_lanzamiento":20.54,"dir_lanzamiento":4.77,"retroceso":5664.02,"efecto_lat":138.43,"vel_rotacion":5665.71,"eje_rotacion":-1.4,"altura_max":27.78,"dist_vuelo":141.94,"ang_desv_vuelo":4.1,"desv_vuelo":10.14,"dist_total":150.57,"ang_desv_total":4.06,"desv_total":10.67},
+{"fecha":"24/4/26 8:57:31","palo":"Hierro 6","vel_palo":36.95,"angulo_ataque":0.19,"linea_cabeza":6.72,"cara_palo":5.41,"cara_a_linea":-1.31,"vel_bola":47.48,"calidad":1.285,"angulo_lanzamiento":17.85,"dir_lanzamiento":5.28,"retroceso":5019.44,"efecto_lat":-328.11,"vel_rotacion":5030.15,"eje_rotacion":3.74,"altura_max":21.62,"dist_vuelo":137.37,"ang_desv_vuelo":6.89,"desv_vuelo":16.48,"dist_total":148.73,"ang_desv_total":6.99,"desv_total":18.11},
+{"fecha":"24/4/26 8:57:50","palo":"Hierro 6","vel_palo":37.76,"angulo_ataque":-1.34,"linea_cabeza":4.72,"cara_palo":7.91,"cara_a_linea":3.19,"vel_bola":46.33,"calidad":1.227,"angulo_lanzamiento":5.4,"dir_lanzamiento":7.09,"retroceso":2948.18,"efecto_lat":-1828.66,"vel_rotacion":3469.26,"eje_rotacion":31.81,"altura_max":2.66,"dist_vuelo":82.79,"ang_desv_vuelo":12.99,"desv_vuelo":18.61,"dist_total":137.47,"ang_desv_total":15.51,"desv_total":36.76},
+{"fecha":"24/4/26 8:58:01","palo":"Hierro 6","vel_palo":37.98,"angulo_ataque":-0.41,"linea_cabeza":7.3,"cara_palo":3.42,"cara_a_linea":-3.88,"vel_bola":50.88,"calidad":1.34,"angulo_lanzamiento":18.75,"dir_lanzamiento":3.72,"retroceso":4640.7,"efecto_lat":1014.38,"vel_rotacion":4750.27,"eje_rotacion":-12.33,"altura_max":26.25,"dist_vuelo":151.76,"ang_desv_vuelo":-1.9,"desv_vuelo":-5.03,"dist_total":162.92,"ang_desv_total":-2.22,"desv_total":-6.32},
+{"fecha":"24/4/26 8:58:16","palo":"Hierro 6","vel_palo":38.89,"angulo_ataque":-1.32,"linea_cabeza":5.18,"cara_palo":2.95,"cara_a_linea":-2.23,"vel_bola":50.99,"calidad":1.311,"angulo_lanzamiento":17.07,"dir_lanzamiento":3.08,"retroceso":5343.61,"efecto_lat":-226.77,"vel_rotacion":5348.42,"eje_rotacion":2.43,"altura_max":24.95,"dist_vuelo":149.96,"ang_desv_vuelo":4.23,"desv_vuelo":11.06,"dist_total":160.33,"ang_desv_total":4.29,"desv_total":11.99},
+{"fecha":"24/4/26 8:58:31","palo":"Hierro 6","vel_palo":38.03,"angulo_ataque":-1.26,"linea_cabeza":4.96,"cara_palo":7.27,"cara_a_linea":2.31,"vel_bola":46.69,"calidad":1.228,"angulo_lanzamiento":19.16,"dir_lanzamiento":6.59,"retroceso":6530.69,"efecto_lat":-1077.64,"vel_rotacion":6619.0,"eje_rotacion":9.37,"altura_max":23.21,"dist_vuelo":130.09,"ang_desv_vuelo":10.96,"desv_vuelo":24.74,"dist_total":137.9,"ang_desv_total":11.16,"desv_total":26.7},
+{"fecha":"24/4/26 8:58:44","palo":"Hierro 6","vel_palo":36.53,"angulo_ataque":0.07,"linea_cabeza":4.78,"cara_palo":4.6,"cara_a_linea":-0.18,"vel_bola":37.88,"calidad":1.037,"angulo_lanzamiento":17.8,"dir_lanzamiento":4.38,"retroceso":2227.74,"efecto_lat":-169.07,"vel_rotacion":2234.15,"eje_rotacion":4.34,"altura_max":10.08,"dist_vuelo":96.6,"ang_desv_vuelo":5.29,"desv_vuelo":8.9,"dist_total":124.44,"ang_desv_total":5.47,"desv_total":11.87},
+{"fecha":"24/4/26 8:59:05","palo":"Hierro 6","vel_palo":36.9,"angulo_ataque":1.65,"linea_cabeza":6.55,"cara_palo":null,"cara_a_linea":null,"vel_bola":33.47,"calidad":0.907,"angulo_lanzamiento":14.69,"dir_lanzamiento":28.41,"retroceso":1394.41,"efecto_lat":-2878.06,"vel_rotacion":3198.06,"eje_rotacion":64.15,"altura_max":4.16,"dist_vuelo":56.37,"ang_desv_vuelo":36.3,"desv_vuelo":33.37,"dist_total":78.12,"ang_desv_total":38.48,"desv_total":48.61},
+{"fecha":"24/4/26 8:59:21","palo":"Hierro 6","vel_palo":37.71,"angulo_ataque":-3.19,"linea_cabeza":2.87,"cara_palo":-2.82,"cara_a_linea":-5.69,"vel_bola":51.91,"calidad":1.377,"angulo_lanzamiento":14.92,"dir_lanzamiento":-1.96,"retroceso":4484.99,"efecto_lat":-590.46,"vel_rotacion":4523.69,"eje_rotacion":7.5,"altura_max":21.61,"dist_vuelo":154.99,"ang_desv_vuelo":1.33,"desv_vuelo":3.6,"dist_total":168.45,"ang_desv_total":1.57,"desv_total":4.6},
+{"fecha":"24/4/26 9:00:10","palo":"Hierro 5","vel_palo":38.14,"angulo_ataque":1.95,"linea_cabeza":-1.36,"cara_palo":10.75,"cara_a_linea":12.11,"vel_bola":50.49,"calidad":1.324,"angulo_lanzamiento":19.13,"dir_lanzamiento":8.66,"retroceso":5911.98,"efecto_lat":-888.83,"vel_rotacion":5978.42,"eje_rotacion":8.55,"altura_max":27.61,"dist_vuelo":145.76,"ang_desv_vuelo":12.89,"desv_vuelo":32.52,"dist_total":154.22,"ang_desv_total":13.07,"desv_total":34.87},
+{"fecha":"24/4/26 9:00:24","palo":"Hierro 5","vel_palo":37.91,"angulo_ataque":3.41,"linea_cabeza":4.51,"cara_palo":-6.65,"cara_a_linea":-11.16,"vel_bola":48.94,"calidad":1.291,"angulo_lanzamiento":14.73,"dir_lanzamiento":-4.9,"retroceso":2764.12,"efecto_lat":1798.47,"vel_rotacion":3297.7,"eje_rotacion":-33.05,"altura_max":14.09,"dist_vuelo":135.36,"ang_desv_vuelo":-15.11,"desv_vuelo":-35.28,"dist_total":156.91,"ang_desv_total":-16.53,"desv_total":-44.64},
+{"fecha":"24/4/26 9:01:15","palo":"Hierro 5","vel_palo":37.33,"angulo_ataque":3.38,"linea_cabeza":4.88,"cara_palo":1.64,"cara_a_linea":-3.24,"vel_bola":49.08,"calidad":1.315,"angulo_lanzamiento":17.63,"dir_lanzamiento":1.96,"retroceso":3583.25,"efecto_lat":545.75,"vel_rotacion":3624.57,"eje_rotacion":-8.66,"altura_max":21.37,"dist_vuelo":148.6,"ang_desv_vuelo":-1.38,"desv_vuelo":-3.59,"dist_total":163.51,"ang_desv_total":-1.66,"desv_total":-4.73},
+{"fecha":"24/4/26 9:01:39","palo":"Hierro 5","vel_palo":38.18,"angulo_ataque":2.44,"linea_cabeza":2.69,"cara_palo":-5.19,"cara_a_linea":-7.88,"vel_bola":52.18,"calidad":1.367,"angulo_lanzamiento":15.64,"dir_lanzamiento":-3.93,"retroceso":3326.26,"efecto_lat":1450.44,"vel_rotacion":3628.75,"eje_rotacion":-23.56,"altura_max":20.04,"dist_vuelo":156.35,"ang_desv_vuelo":-12.96,"desv_vuelo":-35.06,"dist_total":172.58,"ang_desv_total":-13.77,"desv_total":-41.08},
+{"fecha":"24/4/26 9:01:58","palo":"Hierro 5","vel_palo":40.94,"angulo_ataque":0.84,"linea_cabeza":4.08,"cara_palo":2.89,"cara_a_linea":-1.19,"vel_bola":46.39,"calidad":1.133,"angulo_lanzamiento":1.29,"dir_lanzamiento":2.88,"retroceso":1697.86,"efecto_lat":-1260.94,"vel_rotacion":2114.88,"eje_rotacion":36.6,"altura_max":0.11,"dist_vuelo":20.73,"ang_desv_vuelo":4.06,"desv_vuelo":1.47,"dist_total":127.87,"ang_desv_total":5.23,"desv_total":11.66},
+{"fecha":"24/4/26 9:02:16","palo":"Hierro 5","vel_palo":38.64,"angulo_ataque":3.54,"linea_cabeza":2.59,"cara_palo":0.81,"cara_a_linea":-1.78,"vel_bola":52.62,"calidad":1.362,"angulo_lanzamiento":18.81,"dir_lanzamiento":0.99,"retroceso":4137.87,"efecto_lat":664.26,"vel_rotacion":4190.85,"eje_rotacion":-9.12,"altura_max":28.15,"dist_vuelo":161.98,"ang_desv_vuelo":-3.15,"desv_vuelo":-8.89,"dist_total":173.99,"ang_desv_total":-3.38,"desv_total":-10.27},
+{"fecha":"24/4/26 9:02:48","palo":"Hierro 5","vel_palo":39.08,"angulo_ataque":0.01,"linea_cabeza":5.21,"cara_palo":2.9,"cara_a_linea":-2.31,"vel_bola":53.84,"calidad":1.378,"angulo_lanzamiento":17.79,"dir_lanzamiento":3.04,"retroceso":4740.68,"efecto_lat":343.97,"vel_rotacion":4753.14,"eje_rotacion":-4.15,"altura_max":29.01,"dist_vuelo":163.86,"ang_desv_vuelo":1.03,"desv_vuelo":2.93,"dist_total":174.8,"ang_desv_total":0.92,"desv_total":2.81},
+{"fecha":"24/4/26 9:03:37","palo":"Hierro 5","vel_palo":38.12,"angulo_ataque":0.75,"linea_cabeza":4.48,"cara_palo":7.83,"cara_a_linea":3.35,"vel_bola":48.23,"calidad":1.265,"angulo_lanzamiento":22.16,"dir_lanzamiento":7.0,"retroceso":5380.08,"efecto_lat":-1666.44,"vel_rotacion":5632.26,"eje_rotacion":17.21,"altura_max":27.95,"dist_vuelo":137.93,"ang_desv_vuelo":15.03,"desv_vuelo":35.78,"dist_total":146.42,"ang_desv_total":15.4,"desv_total":38.89},
+{"fecha":"24/4/26 9:03:49","palo":"Hierro 5","vel_palo":38.25,"angulo_ataque":-0.32,"linea_cabeza":4.36,"cara_palo":-0.04,"cara_a_linea":-4.4,"vel_bola":52.04,"calidad":1.361,"angulo_lanzamiento":17.85,"dir_lanzamiento":0.51,"retroceso":4335.57,"efecto_lat":690.57,"vel_rotacion":4390.22,"eje_rotacion":-9.05,"altura_max":26.15,"dist_vuelo":158.17,"ang_desv_vuelo":-3.57,"desv_vuelo":-9.85,"dist_total":170.26,"ang_desv_total":-3.82,"desv_total":-11.33},
+{"fecha":"24/4/26 9:04:03","palo":"Hierro 5","vel_palo":38.59,"angulo_ataque":-0.74,"linea_cabeza":5.29,"cara_palo":1.51,"cara_a_linea":-3.78,"vel_bola":50.92,"calidad":1.32,"angulo_lanzamiento":16.14,"dir_lanzamiento":1.9,"retroceso":4578.71,"efecto_lat":196.71,"vel_rotacion":4582.93,"eje_rotacion":-2.46,"altura_max":22.66,"dist_vuelo":152.06,"ang_desv_vuelo":0.82,"desv_vuelo":2.17,"dist_total":164.81,"ang_desv_total":0.74,"desv_total":2.14},
+{"fecha":"24/4/26 9:04:22","palo":"Hierro 5","vel_palo":38.4,"angulo_ataque":-0.09,"linea_cabeza":4.05,"cara_palo":-1.07,"cara_a_linea":-5.12,"vel_bola":49.18,"calidad":1.281,"angulo_lanzamiento":13.0,"dir_lanzamiento":-0.37,"retroceso":3862.84,"efecto_lat":128.82,"vel_rotacion":3864.99,"eje_rotacion":-1.91,"altura_max":15.25,"dist_vuelo":141.88,"ang_desv_vuelo":-1.07,"desv_vuelo":-2.66,"dist_total":159.12,"ang_desv_total":-1.14,"desv_total":-3.18},
+{"fecha":"24/4/26 9:04:49","palo":"Hierro 5","vel_palo":37.86,"angulo_ataque":-1.28,"linea_cabeza":4.12,"cara_palo":-3.97,"cara_a_linea":-8.09,"vel_bola":46.41,"calidad":1.226,"angulo_lanzamiento":13.62,"dir_lanzamiento":-2.75,"retroceso":2568.17,"efecto_lat":1221.65,"vel_rotacion":2843.93,"eje_rotacion":-25.44,"altura_max":11.14,"dist_vuelo":124.03,"ang_desv_vuelo":-9.55,"desv_vuelo":-20.58,"dist_total":159.39,"ang_desv_total":-11.05,"desv_total":-30.56},
+{"fecha":"24/4/26 9:04:58","palo":"Hierro 5","vel_palo":38.45,"angulo_ataque":-0.05,"linea_cabeza":6.85,"cara_palo":-0.53,"cara_a_linea":-7.38,"vel_bola":46.53,"calidad":1.21,"angulo_lanzamiento":15.26,"dir_lanzamiento":0.42,"retroceso":3160.76,"efecto_lat":1417.19,"vel_rotacion":3463.93,"eje_rotacion":-24.15,"altura_max":14.19,"dist_vuelo":129.47,"ang_desv_vuelo":-7.29,"desv_vuelo":-16.42,"dist_total":147.79,"ang_desv_total":-8.22,"desv_total":-21.14},
+{"fecha":"24/4/26 9:05:08","palo":"Hierro 5","vel_palo":38.47,"angulo_ataque":-0.47,"linea_cabeza":5.7,"cara_palo":3.44,"cara_a_linea":-2.26,"vel_bola":51.14,"calidad":1.329,"angulo_lanzamiento":18.35,"dir_lanzamiento":3.54,"retroceso":4548.17,"efecto_lat":65.1,"vel_rotacion":4548.64,"eje_rotacion":-0.82,"altura_max":26.32,"dist_vuelo":154.43,"ang_desv_vuelo":3.17,"desv_vuelo":8.54,"dist_total":165.95,"ang_desv_total":3.15,"desv_total":9.11}];
+
+const COLOR_CONFIG={
+  calidad:{label:'Calidad impacto',
+    buckets:[{k:'q-ex',c:'hsl(120,75%,45%)',l:'≥1.20 excelente',test:v=>v>=1.2},
+             {k:'q-ok',c:'hsl(55,90%,50%)',l:'1.10–1.20 bueno',test:v=>v>=1.1&&v<1.2},
+             {k:'q-av',c:'hsl(30,90%,52%)',l:'1.00–1.10 regular',test:v=>v>=1.0&&v<1.1},
+             {k:'q-ba',c:'hsl(0,85%,50%)',l:'<1.00 malo',test:v=>v<1.0}],
+    fn:v=>{if(v==null)return'#556b5a';if(v<1.0)return'hsl(0,85%,50%)';if(v<1.1)return'hsl(30,90%,52%)';if(v<1.2)return'hsl(55,90%,50%)';return'hsl(120,75%,45%)';}},
+  dist_total:{label:'Distancia total',unit:'m',dynamicBuckets:true,
+    fn:(v,mn,mx)=>{const t=mx>mn?(v-mn)/(mx-mn):0.5;return `hsl(${Math.round(t*120)},75%,48%)`;}},
+  dist_vuelo:{label:'Dist. vuelo',unit:'m',dynamicBuckets:true,
+    fn:(v,mn,mx)=>{const t=mx>mn?(v-mn)/(mx-mn):0.5;return `hsl(${Math.round(t*120)},75%,48%)`;}},
+  desv_total:{label:'Desv. lateral',unit:'m',signed:true,
+    buckets:[{k:'dl-ll',c:'#3060c0',l:'<−15m izq',test:v=>v<-15},{k:'dl-l',c:'#6fa8dc',l:'−15 a −5m',test:v=>v>=-15&&v<-5},{k:'dl-c',c:'#aaa',l:'Centro ±5m',test:v=>Math.abs(v)<=5},{k:'dl-r',c:'#f2994a',l:'+5 a +15m',test:v=>v>5&&v<=15},{k:'dl-rr',c:'#e63946',l:'>+15m der',test:v=>v>15}],
+    fn:v=>{if(v==null)return'#556b5a';if(v<-15)return'#3060c0';if(v<-5)return'#6fa8dc';if(v>15)return'#e63946';if(v>5)return'#f2994a';return'#888';}},
+  cara_palo:{label:'Cara del palo',unit:'°',signed:true,
+    buckets:[{k:'cp-dc',c:'#3060c0',l:'<−5° muy cerrada',test:v=>v<-5},{k:'cp-d',c:'#6fa8dc',l:'−5 a −2° cerrada',test:v=>v>=-5&&v<-2},{k:'cp-c',c:'#aaa',l:'±2° cuadrada',test:v=>Math.abs(v)<=2},{k:'cp-f',c:'#f2994a',l:'+2 a +5° abierta',test:v=>v>2&&v<=5},{k:'cp-ff',c:'#e63946',l:'>+5° muy abierta',test:v=>v>5}],
+    fn:v=>{if(v==null)return'#556b5a';const t=Math.max(-1,Math.min(1,v/10));if(t>0)return `hsl(${30-t*10},${80+t*10}%,${48+t*7}%)`;return `hsl(${210+Math.abs(t)*20},75%,${48+Math.abs(t)*7}%)`;}},
+  efecto_lat:{label:'Efecto lateral',unit:' rpm',signed:true,
+    buckets:[{k:'el-dd',c:'#3060c0',l:'<−1500 draw fuerte',test:v=>v<-1500},{k:'el-d',c:'#6fa8dc',l:'−1500 a −500',test:v=>v>=-1500&&v<-500},{k:'el-c',c:'#aaa',l:'Neutro ±500',test:v=>Math.abs(v)<=500},{k:'el-f',c:'#f2994a',l:'+500 a +1500',test:v=>v>500&&v<=1500},{k:'el-ff',c:'#e63946',l:'>+1500 fade fuerte',test:v=>v>1500}],
+    fn:v=>{if(v==null)return'#556b5a';const t=Math.max(-1,Math.min(1,v/3000));if(t>0)return `hsl(${30-t*10},85%,50%)`;return `hsl(${210+Math.abs(t)*20},80%,52%)`;}},
+  angulo_ataque:{label:'Ángulo de ataque',unit:'°',signed:true,
+    buckets:[{k:'aa-dd',c:'#e63946',l:'<−3° muy bajo',test:v=>v<-3},{k:'aa-d',c:'#f2994a',l:'−3 a −1°',test:v=>v>=-3&&v<-1},{k:'aa-c',c:'#aaa',l:'Neutro ±1°',test:v=>Math.abs(v)<=1},{k:'aa-a',c:'#6fcf97',l:'+1 a +3°',test:v=>v>1&&v<=3},{k:'aa-aa',c:'#3cba54',l:'>+3° ascendente',test:v=>v>3}],
+    fn:v=>{if(v==null)return'#556b5a';const t=Math.max(-1,Math.min(1,v/8));if(t>0)return `hsl(${110+t*10},75%,45%)`;return `hsl(${0+Math.abs(t)*10},80%,50%)`;}},
+  retroceso:{label:'Backspin',unit:' rpm',dynamicBuckets:true,
+    fn:(v,mn,mx)=>{const t=mx>mn?(v-mn)/(mx-mn):0.5;return `hsl(${Math.round(270-t*150)},70%,52%)`;}},
+  vel_palo:{label:'Vel. palo',unit:' m/s',dynamicBuckets:true,
+    fn:(v,mn,mx)=>{const t=mx>mn?(v-mn)/(mx-mn):0.5;return `hsl(${Math.round(t*120)},75%,48%)`;}},
+  vel_bola:{label:'Vel. bola',unit:' m/s',dynamicBuckets:true,
+    fn:(v,mn,mx)=>{const t=mx>mn?(v-mn)/(mx-mn):0.5;return `hsl(${Math.round(t*200+120)},75%,48%)`;}},
+  altura_max:{label:'Altura máxima',unit:' m',dynamicBuckets:true,
+    fn:(v,mn,mx)=>{const t=mx>mn?(v-mn)/(mx-mn):0.5;return `hsl(${Math.round(t*200+180)},70%,52%)`;}},
+};
+
+
+const CLUB_COLORS={"Sand Wedge":"#a8dadc","Pitching Wedge":"#90e0ef","Hierro 9":"#80ed99","Hierro 8":"#57cc99","Hierro 7":"#38a3a5","Hierro 6":"#e9c46a","Hierro 5":"#f4a261"};
+const CLUB_ABBR={"Sand Wedge":"SW","Pitching Wedge":"PW","Hierro 9":"H9","Hierro 8":"H8","Hierro 7":"H7","Hierro 6":"H6","Hierro 5":"H5"};
+const CLUBS=Object.keys(CLUB_COLORS);
+const ALL_PARAMS=[
+  {k:'dist_total',l:'Dist.',u:'m',d:1},{k:'dist_vuelo',l:'Vuelo',u:'m',d:1},
+  {k:'desv_total',l:'Lateral',u:'m',d:1,signed:true},{k:'altura_max',l:'Alt.máx',u:'m',d:1},
+  {k:'vel_palo',l:'VelPalo',u:'m/s',d:1},{k:'vel_bola',l:'VelBola',u:'m/s',d:1},
+  {k:'cara_palo',l:'Cara',u:'°',d:2,signed:true},{k:'linea_cabeza',l:'Línea',u:'°',d:2,signed:true},
+  {k:'angulo_ataque',l:'Ataque',u:'°',d:2,signed:true},{k:'retroceso',l:'Backspin',u:'rpm',d:0},
+  {k:'efecto_lat',l:'EfLat',u:'rpm',d:0,signed:true},{k:'vel_rotacion',l:'VelRot',u:'rpm',d:0},
+  {k:'eje_rotacion',l:'EjeRot',u:'°',d:1,signed:true},{k:'calidad',l:'Calidad',u:'',d:3},
+  {k:'angulo_lanzamiento',l:'ÁngLanz',u:'°',d:1},
+];
+
+// ── State ──
+let SHOTS_CURRENT = typeof SHOTS !== 'undefined' ? SHOTS.slice() : [];
+let activeClub='Todos', selectedIdx=null, hiddenSet=new Set();
+let colorBy='calidad', sortKey='', sortDir=1;
+let legendFilters=new Set(), tableFilters={};
+let canvasHitShots=[];
+
+// ── Helpers ──
+function avg(a){const v=a.filter(x=>x!=null&&!isNaN(x));return v.length?v.reduce((a,b)=>a+b)/v.length:null;}
+function fmt(v,d=1){return v==null||isNaN(v)?'—':(+v).toFixed(d);}
+function fmtSign(v,d=1){if(v==null||isNaN(v))return'—';return(v>0?'+':'')+v.toFixed(d);}
+
+// ── CSV Parser ──
+function parseCSV(text){
+  const COL={'Tipo de palo':'palo','Fecha':'fecha','Vel. palo':'vel_palo','Ángulo de ataque':'angulo_ataque','Línea cabeza del palo':'linea_cabeza','Cara del palo':'cara_palo','Cara a línea':'cara_a_linea','Velocidad de la pelota':'vel_bola','Calidad del impacto':'calidad','Ángulo de lanzamiento':'angulo_lanzamiento','Dirección de lanzamiento':'dir_lanzamiento','Retroceso':'retroceso','Efecto lateral':'efecto_lat','Velocidad de rotación':'vel_rotacion','Eje de rotación':'eje_rotacion','Altura máxima':'altura_max','Dist.vuelo':'dist_vuelo','Distancia de desviación de vuelo':'desv_vuelo','Distancia total':'dist_total','Distancia de desviación total':'desv_total','Ángulo de desviación total':'ang_desv_total'};
+  const lines=text.split(/\r?\n/);
+  const headers=lines[0].split(',').map(h=>h.trim().replace(/^\uFEFF/,'').replace(/\u200b/g,''));
+  const parsed=[];
+  for(let i=1;i<lines.length;i++){
+    if(!lines[i].trim())continue;
+    const row=lines[i].split(',');
+    const shot={};
+    headers.forEach((h,j)=>{
+      const key=COL[h];if(!key)return;
+      const raw=(row[j]||'').trim();
+      if(key==='palo'||key==='fecha')shot[key]=raw;
+      else{if(!raw||raw==='--'||raw.startsWith('[')||raw==='null')shot[key]=null;else{const n=parseFloat(raw);shot[key]=isNaN(n)?null:n;}}
+    });
+    if(!shot.palo||shot.palo.length<2||shot.palo.startsWith('['))continue;
+    parsed.push(shot);
+  }
+  return parsed;
+}
+
+// ── Data ──
+function isInLegendFilter(s){
+  if(legendFilters.size===0)return true;
+  const cfg=COLOR_CONFIG[colorBy];if(!cfg)return true;
+  // Use dynamic buckets if available, else static
+  const buckets=cfg.dynamicBuckets?(cfg._dynBuckets||[]):cfg.buckets;
+  if(!buckets||!buckets.length)return true;
+  const v=s[colorBy];
+  for(const bk of legendFilters){const b=buckets.find(x=>x.k===bk);if(b&&b.test(v))return true;}
+  return false;
+}
+function passesTableFilters(s){for(const[k,{min,max}]of Object.entries(tableFilters)){const v=s[k];if(v==null)continue;if(min!==''&&min!=null&&!isNaN(+min)&&v<+min)return false;if(max!==''&&max!=null&&!isNaN(+max)&&v>+max)return false;}return true;}
+function getVisibleShots(){return SHOTS_CURRENT.filter((s,i)=>!hiddenSet.has(i)&&s.dist_total>0.5&&(activeClub==='Todos'||s.palo===activeClub)&&isInLegendFilter(s)&&passesTableFilters(s));}
+function getAllFiltered(){return SHOTS_CURRENT.map((s,i)=>({...s,_origIdx:i})).filter(s=>s.dist_total>0.5&&(activeClub==='Todos'||s.palo===activeClub));}
+function getShotColor(s,all){
+  const cfg=COLOR_CONFIG[colorBy]||COLOR_CONFIG.calidad;
+  const v=s[colorBy];if(v==null)return'#556b5a';
+  if(cfg.buckets&&!cfg.dynamicBuckets)return cfg.fn(v);
+  // Use stable mn/mx stored by buildLegendMob so colors don't shift when filter active
+  if(cfg.dynamicBuckets&&cfg._dynMn!=null) return cfg.fn(v,cfg._dynMn,cfg._dynMx);
+  const vals=all.map(x=>x[colorBy]).filter(x=>x!=null);
+  if(!vals.length)return'#556b5a';
+  return cfg.fn(v,Math.min(...vals),Math.max(...vals));
+}
+
+// ── Screens ──
+function showScreen(id,tab){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  const screen=document.getElementById(id);
+  if(screen) screen.classList.add('active');
+  if(tab) tab.classList.add('active');
+  if(id==='screen-map') setTimeout(()=>drawMapMob(),30);
+  if(id==='screen-stats') buildStatsMob();
+  if(id==='screen-shots') buildShotList();
+}
+function resetAll(){hiddenSet=new Set();selectedIdx=null;legendFilters=new Set();tableFilters={};sortKey='';sortDir=1;activeClub='Todos';render();}
+
+// ── CSV Loader ──
+function initCSVLoader(){
+  const input=document.getElementById('csvInput-mob');if(!input)return;
+  input.onchange=function(e){
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=function(ev){
+      const parsed=parseCSV(ev.target.result);
+      const statusEl=document.getElementById('upload-status-mob');
+      if(parsed.length>0){
+        SHOTS_CURRENT=parsed;hiddenSet=new Set();selectedIdx=null;legendFilters=new Set();tableFilters={};
+        if(statusEl)statusEl.textContent=`✅ ${file.name} · ${parsed.length} golpes`;
+        const clubs=[...new Set(parsed.map(s=>s.palo))];
+        const si=document.getElementById('session-info');
+        if(si)si.innerHTML=`📅 ${file.name}<br>🎯 Golpes: ${parsed.length}<br>⛳ Palos: ${clubs.join(', ')}`;
+        render();
+      }else{
+        if(statusEl)statusEl.textContent='⚠ Sin datos válidos en el CSV.';
+      }
+    };
+    reader.onerror=function(){const s=document.getElementById('upload-status-mob');if(s)s.textContent='⚠ Error al leer el fichero.';};
+    reader.readAsText(file,'utf-8');
+  };
+}
+
+// ── Strip ──
+function buildStripMob(){
+  const vis=getVisibleShots();
+  document.getElementById('strip-mob').innerHTML=[
+    {v:vis.length+(hiddenSet.size?` <span style="color:var(--red)">−${hiddenSet.size}</span>`:''),l:'Golpes'},
+    {v:fmt(avg(vis.map(s=>s.dist_total)))+'m',l:'Dist.μ'},
+    {v:fmtSign(avg(vis.map(s=>s.desv_total)))+'m',l:'Lat.μ'},
+    {v:fmt(avg(vis.map(s=>s.calidad)),3),l:'Cal.μ'},
+  ].map(x=>`<div class="si"><div class="sv">${x.v}</div><div class="sl">${x.l}</div></div>`).join('');
+}
+
+// ── Tabs ──
+function buildTabsMob(id){
+  const c=document.getElementById(id);if(!c)return;c.innerHTML='';
+  const make=(l,v,col)=>{const b=document.createElement('button');b.className='club-btn'+(activeClub===v?' active':'');b.textContent=l;if(activeClub===v){b.style.background=col||'var(--gl)';b.style.color='#0d1b0f';}b.onclick=()=>{activeClub=v;selectedIdx=null;render();};c.appendChild(b);};
+  make('Todos','Todos',null);
+  CLUBS.forEach(n=>make(CLUB_ABBR[n],n,CLUB_COLORS[n]));
+}
+
+// ── Legend ──
+function buildLegendMob(){
+  const el=document.getElementById('legend-mob');if(!el)return;
+  const cfg=COLOR_CONFIG[colorBy];
+  if(!cfg){el.innerHTML='';return;}
+
+  if(cfg.dynamicBuckets){
+    // Compute stable quartiles from BASE shots (no legend filter) so ranges don't shift on click
+    const baseShots=SHOTS_CURRENT.filter((s,i)=>
+      !hiddenSet.has(i)&&s.dist_total>0.5&&
+      (activeClub==='Todos'||s.palo===activeClub)&&
+      passesTableFilters(s)
+    );
+    const vals=baseShots.map(s=>s[colorBy]).filter(v=>v!=null).sort((a,b)=>a-b);
+    if(!vals.length){el.innerHTML='';return;}
+    const mn=vals[0], mx=vals[vals.length-1];
+    const q1=vals[Math.floor(vals.length*0.25)];
+    const q2=vals[Math.floor(vals.length*0.5)];
+    const q3=vals[Math.floor(vals.length*0.75)];
+    const unit=cfg.unit||'';
+    const fmt1=v=>Math.abs(v)<10?v.toFixed(1):Math.round(v);
+    const dynBuckets=[
+      {k:'dyn-q1',c:cfg.fn(mn+(mx-mn)*0.1,mn,mx), l:`<${fmt1(q1)}${unit}`,                 test:v=>v<q1},
+      {k:'dyn-q2',c:cfg.fn(mn+(mx-mn)*0.35,mn,mx),l:`${fmt1(q1)}–${fmt1(q2)}${unit}`,      test:v=>v>=q1&&v<q2},
+      {k:'dyn-q3',c:cfg.fn(mn+(mx-mn)*0.65,mn,mx),l:`${fmt1(q2)}–${fmt1(q3)}${unit}`,      test:v=>v>=q2&&v<q3},
+      {k:'dyn-q4',c:cfg.fn(mn+(mx-mn)*0.9,mn,mx), l:`≥${fmt1(q3)}${unit}`,                 test:v=>v>=q3},
+    ];
+    cfg._dynBuckets=dynBuckets;
+    cfg._dynMn=mn; cfg._dynMx=mx;
+    el.innerHTML=dynBuckets.map(b=>
+      `<div class="leg-item${legendFilters.has(b.k)?' active-filter':''}" data-bk="${b.k}">
+        <span class="leg-dot" style="background:${b.c}"></span>${b.l}</div>`
+    ).join('');
+    el.querySelectorAll('.leg-item').forEach(item=>{
+      item.onclick=()=>{const bk=item.dataset.bk;legendFilters.has(bk)?legendFilters.delete(bk):legendFilters.add(bk);render();};
+    });
+    return;
+  }
+
+  if(!cfg.buckets){el.innerHTML='';return;}
+  el.innerHTML=cfg.buckets.map(b=>`<div class="leg-item${legendFilters.has(b.k)?' active-filter':''}" data-bk="${b.k}"><span class="leg-dot" style="background:${b.c}"></span>${b.l}</div>`).join('');
+  el.querySelectorAll('.leg-item').forEach(item=>{item.onclick=()=>{const bk=item.dataset.bk;legendFilters.has(bk)?legendFilters.delete(bk):legendFilters.add(bk);render();};});
+}
+
+// ── Map ──
+function drawMapMob(){
+  const canvas=document.getElementById('fairway-mob');if(!canvas)return;
+  const all=getAllFiltered();const vis=getVisibleShots();
+  // Use a Set of indices for O(1) visibility lookup (avoids object reference comparison bug)
+  const visIdxSet=new Set(vis.map((_,i)=>SHOTS_CURRENT.indexOf(vis[i])));
+  const W=canvas.offsetWidth||window.innerWidth;
+  const H=Math.round(W*1.08);
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  if(!all.length){
+    ctx.fillStyle='#0c2a10';ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#7a9e84';ctx.font='13px monospace';ctx.textAlign='center';
+    ctx.fillText('Carga un CSV para ver datos',W/2,H/2);return;
+  }
+  const desvs=all.map(s=>s.desv_total).filter(v=>v!=null);
+  const dists=all.map(s=>s.dist_total);
+  const maxY=Math.max(...dists)*1.1;
+  const maxAbsX=Math.max(Math.abs(Math.max(...desvs)),Math.abs(Math.min(...desvs)),25)*1.2;
+  const pad={top:28,bottom:20,left:36,right:36};
+  const mW=W-pad.left-pad.right,mH=H-pad.top-pad.bottom;
+  const toC=(x,y)=>({cx:pad.left+(x/maxAbsX+1)/2*mW,cy:pad.top+(1-y/maxY)*mH});
+  canvasHitShots=all.map(s=>({...s,_c:s.desv_total!=null?toC(s.desv_total,s.dist_total):null}));
+  const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#0c2a10');bg.addColorStop(1,'#091508');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
+  [25,50,75,100,125,150,175].forEach(d=>{if(d>maxY)return;const{cy}=toC(0,d);ctx.strokeStyle='rgba(255,255,255,.07)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.left,cy);ctx.lineTo(pad.left+mW,cy);ctx.stroke();ctx.fillStyle='rgba(180,210,180,.3)';ctx.font='8px monospace';ctx.textAlign='left';ctx.fillText(d+'m',2,cy+3);});
+  const{cx:cxC}=toC(0,0);ctx.strokeStyle='rgba(255,255,255,.15)';ctx.setLineDash([5,6]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cxC,pad.top);ctx.lineTo(cxC,pad.top+mH);ctx.stroke();ctx.setLineDash([]);
+  all.forEach(s=>{
+    if(s.desv_total==null)return;
+    const{cx,cy}=toC(s.desv_total,s.dist_total);
+    const isHid=hiddenSet.has(s._origIdx),isSel=s._origIdx===selectedIdx;
+    const inVis=visIdxSet.has(s._origIdx);
+    const col=getShotColor(s,vis);const club=CLUB_COLORS[s.palo]||'#52b788';
+    if(isHid){ctx.globalAlpha=.15;ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fillStyle='#556b5a';ctx.fill();ctx.globalAlpha=1;return;}
+    if(!inVis&&!isSel){ctx.globalAlpha=.1;ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();ctx.globalAlpha=1;return;}
+    if(isSel){
+      // Glow ring
+      ctx.beginPath();ctx.arc(cx,cy,10,0,Math.PI*2);ctx.fillStyle='rgba(233,196,106,.22)';ctx.fill();
+      ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);ctx.strokeStyle='rgba(233,196,106,.9)';ctx.lineWidth=2;ctx.stroke();
+      // Crosshairs
+      ctx.strokeStyle='rgba(233,196,106,.5)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+      ctx.beginPath();ctx.moveTo(pad.left,cy);ctx.lineTo(cx-10,cy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(cx+10,cy);ctx.lineTo(pad.left+mW,cy);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(cx,pad.top);ctx.lineTo(cx,cy-10);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(cx,cy+10);ctx.lineTo(cx,pad.top+mH);ctx.stroke();
+      ctx.setLineDash([]);
+    }
+    ctx.beginPath();ctx.arc(cx,cy,7,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();
+    ctx.beginPath();ctx.arc(cx,cy,2.5,0,Math.PI*2);ctx.fillStyle=club;ctx.fill();
+  });
+  const mX=avg(vis.map(s=>s.desv_total)),mY=avg(vis.map(s=>s.dist_total));
+  if(mX!=null&&mY!=null){const{cx:mx,cy:my}=toC(mX,mY);ctx.beginPath();ctx.arc(mx,my,8,0,Math.PI*2);ctx.fillStyle='rgba(233,196,106,.9)';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='#0d1b0f';ctx.font='bold 8px monospace';ctx.textAlign='center';ctx.fillText('μ',mx,my+3);}
+  ctx.globalAlpha=1;ctx.fillStyle='rgba(120,160,130,.4)';ctx.font='8px monospace';ctx.textAlign='left';ctx.fillText('◄ IZQ',4,pad.top+12);ctx.textAlign='right';ctx.fillText('DER ►',W-4,pad.top+12);
+  ctx.fillStyle='#52b788';ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.fillText('▲ TEE',toC(0,0).cx,H-4);
+}
+
+// ── Touch / click map ──
+function initMapMob(){
+  const canvas=document.getElementById('fairway-mob');
+  const tt=document.getElementById('tooltip-mob');
+  function nearest(mx,my,thr){let best=null,bestD=thr;canvasHitShots.forEach(s=>{if(!s._c||hiddenSet.has(s._origIdx))return;const d=Math.hypot(s._c.cx-mx,s._c.cy-my);if(d<bestD){bestD=d;best=s;}});return best;}
+  function coords(e,canvas){const rect=canvas.getBoundingClientRect();const sx=canvas.width/rect.width,sy=canvas.height/rect.height;const src=(e.touches&&e.touches[0])||(e.changedTouches&&e.changedTouches[0])||e;if(!src)return{mx:0,my:0,ex:0,ey:0};return{mx:(src.clientX-rect.left)*sx,my:(src.clientY-rect.top)*sy,ex:src.clientX-rect.left,ey:src.clientY-rect.top};}
+  function showTT(e,s){
+    const rect=canvas.getBoundingClientRect();
+    const src=e.touches?e.touches[0]:e;
+    tt.style.left=Math.min(src.clientX-rect.left+10,rect.width-170)+'px';
+    tt.style.top=Math.max(src.clientY-rect.top-80,5)+'px';
+    tt.style.display='block';
+    const dc=CLUB_COLORS[s.palo]||'#52b788';
+    tt.innerHTML=`<div style="color:${dc};font-weight:600;margin-bottom:.15rem">${s.palo}</div>`+
+      `<div class="tt-row"><span class="tt-key">Dist</span><span class="tt-val">${s.dist_total.toFixed(1)}m</span></div>`+
+      `<div class="tt-row"><span class="tt-key">Lateral</span><span class="tt-val" style="color:${(s.desv_total||0)>0?'#f2994a':'#6fcf97'}">${fmtSign(s.desv_total)}m</span></div>`+
+      `<div class="tt-row"><span class="tt-key">Cara</span><span class="tt-val">${fmtSign(s.cara_palo)}°</span></div>`+
+      `<div class="tt-row"><span class="tt-key">Calidad</span><span class="tt-val">${fmt(s.calidad,3)}</span></div>`;
+    // Tap elsewhere to close
+  }
+  canvas.addEventListener('touchstart',e=>{
+    e.preventDefault();
+    tt.style.display='none'; // hide previous tooltip
+    const{mx,my}=coords(e,canvas);
+    const s=nearest(mx,my,28);
+    if(s)showTT(e,s);
+  },{passive:false});
+  canvas.addEventListener('touchend',e=>{
+    e.preventDefault();
+    const{mx,my}=coords(e,canvas);
+    const s=nearest(mx,my,28);
+    if(s){
+      selectedIdx=s._origIdx===selectedIdx?null:s._origIdx;
+      // Redraw map to show selection, update strip and tabs
+      buildStripMob();
+      buildLegendMob();
+      drawMapMob();
+      // Update count
+      const cntEl=document.getElementById('shot-count-mob');
+      if(cntEl)cntEl.textContent=`${getVisibleShots().length} visibles`;
+      // If stats screen is active, update it
+      const activeScreen=document.querySelector('.screen.active');
+      if(activeScreen&&activeScreen.id==='screen-stats') buildStatsMob();
+      if(activeScreen&&activeScreen.id==='screen-shots') buildShotList();
+    }
+  },{passive:false});
+  canvas.addEventListener('click',e=>{const{mx,my}=coords(e,canvas);const s=nearest(mx,my,18);if(s){selectedIdx=s._origIdx===selectedIdx?null:s._origIdx;render();}});
+}
+
+function selectShotMob(idx){
+  selectedIdx=idx;
+  render();
+  if(idx!==null){
+    const statsTab=document.querySelector('[data-screen="screen-stats"]');
+    showScreen('screen-stats', statsTab);
+  }
+}
+
+// ── Stats ──
+function buildStatsMob(){
+  // vis = shots filtered by activeClub + legend + table filters
+  const vis=getVisibleShots();
+  const grid=document.getElementById('stats-main-grid');if(!grid)return;
+  grid.innerHTML='';
+  if(selectedIdx!==null&&SHOTS_CURRENT[selectedIdx]){
+    const s=SHOTS_CURRENT[selectedIdx];
+    // Stats for selected shot, compare vs its club average from vis
+    const clubShots=vis.filter(x=>x.palo===s.palo);
+    ALL_PARAMS.forEach(({k,l,u,d,signed})=>{
+      const v=s[k]; if(v==null)return;
+      const clubAvg=avg(clubShots.map(x=>x[k]));
+      const diff=clubAvg!=null?v-clubAvg:null;
+      const color=signed?(v>0?'#f2994a':'#6fcf97'):'var(--gl)';
+      const diffStr=diff!=null?` <span style="font-size:.42rem;color:${Math.abs(diff)<0.5?'var(--muted)':diff>0?'#6fcf97':'#f2994a'}">${diff>0?'+':''}${diff.toFixed(1)}μ</span>`:'';
+      const box=document.createElement('div');box.className='stat-box';
+      box.innerHTML=`<div class="sb-val" style="color:${color}">${signed?fmtSign(v,d):fmt(v,d)}${u}</div><div class="sb-lbl">${l}${diffStr}</div>`;
+      grid.appendChild(box);
+    });
+  } else {
+    // Show averages for current club filter
+    ALL_PARAMS.forEach(({k,l,u,d,signed})=>{
+      const vals=vis.map(s=>s[k]).filter(v=>v!=null&&!isNaN(v)); if(!vals.length)return;
+      const mean=avg(vals);
+      const color=signed?(mean>0?'#f2994a':'#6fcf97'):'var(--gl)';
+      const box=document.createElement('div');box.className='stat-box';
+      box.innerHTML=`<div class="sb-val" style="color:${color}">${signed?fmtSign(mean,d):fmt(mean,d)}${u}</div><div class="sb-lbl">${l}</div>`;
+      grid.appendChild(box);
+    });
+  }
+  // Lateral field
+  const lf=document.getElementById('lat-field-mob');if(!lf)return;
+  [...lf.querySelectorAll('.ldot')].forEach(d=>d.remove());
+  const desvs=vis.map(s=>s.desv_total).filter(v=>v!=null);
+  if(desvs.length){
+    const maxAbs=Math.max(Math.abs(Math.max(...desvs)),Math.abs(Math.min(...desvs)),15);
+    const lbl=document.getElementById('lat-lbl-mob');
+    if(lbl)lbl.textContent=`Lateral · μ ${fmtSign(avg(desvs))}m · ${desvs.filter(v=>v>0).length} der / ${desvs.filter(v=>v<0).length} izq`;
+    vis.forEach(s=>{
+      if(s.desv_total==null)return;
+      const origIdx=SHOTS_CURRENT.indexOf(s);
+      const pct=50+(s.desv_total/maxAbs)*46;
+      const isSel=selectedIdx===origIdx;
+      const dot=document.createElement('div');dot.className='ldot';
+      dot.style.cssText=`position:absolute;left:${pct}%;top:50%;transform:translate(-50%,-50%);width:${isSel?10:5}px;height:${isSel?10:5}px;border-radius:50%;background:${isSel?'var(--gold)':s.desv_total>0?'#f2994a':'#6fcf97'};opacity:${isSel?1:.65};z-index:${isSel?5:1};cursor:pointer;`;
+      dot.onclick=()=>selectShotMob(origIdx===selectedIdx?null:origIdx);
+      lf.appendChild(dot);
+    });
+    const mt=document.createElement('div');mt.className='ldot';mt.style.cssText=`position:absolute;left:${50+(avg(desvs)/maxAbs)*46}%;top:0;width:2px;height:100%;background:var(--gold);pointer-events:none;`;
+    lf.appendChild(mt);
+  }
+  // Selected detail
+  const det=document.getElementById('detail-selected');
+  if(det&&selectedIdx!==null&&SHOTS_CURRENT[selectedIdx]){
+    const s=SHOTS_CURRENT[selectedIdx];
+    det.innerHTML=`<div class="detail-panel"><div class="detail-title">${s.palo} · ${(s.fecha||'').split(' ')[1]||''}</div><div class="detail-grid">${
+      ALL_PARAMS.map(({k,l,u,d,signed})=>{const v=s[k];if(v==null)return'';const c=signed?(v>0?'#f2994a':'#6fcf97'):'var(--gl)';return`<div class="dg-item"><span class="dg-key">${l}</span><span style="color:${c}">${signed?fmtSign(v,d):fmt(v,d)}${u}</span></div>`;}).join('')
+    }</div></div>`;
+  }else if(det){det.innerHTML='';}
+}
+
+// ── Shot list ──
+function buildShotList(){
+  const all=getAllFiltered();
+  let rows=all.slice();
+  if(sortKey)rows.sort((a,b)=>{const va=a[sortKey]??-Infinity,vb=b[sortKey]??-Infinity;return sortDir*(va>vb?1:va<vb?-1:0);});
+  const list=document.getElementById('shot-list');if(!list)return;
+  list.innerHTML='';
+  const cntEl=document.getElementById('shot-count-mob');
+  if(cntEl)cntEl.textContent=`${getVisibleShots().length} visibles`;
+  rows.forEach((s,i)=>{
+    const origIdx=s._origIdx;
+    const isHid=hiddenSet.has(origIdx),isSel=selectedIdx===origIdx;
+    const dc=CLUB_COLORS[s.palo]||'var(--gl)';
+    const lc=s.desv_total>0?'#f2994a':s.desv_total<0?'#6fcf97':'var(--text)';
+    const div=document.createElement('div');
+    div.className=`shot-item${isSel?' selected':''}${isHid?' hidden-s':''}`;
+    div.innerHTML=`<span class="si-club" style="color:${dc}">${CLUB_ABBR[s.palo]||''}</span>
+      <span class="si-dist">${s.dist_total.toFixed(0)}</span>
+      <span style="font-family:'DM Mono',monospace;font-size:.52rem;color:${lc};width:40px;flex-shrink:0;">${fmtSign(s.desv_total)}m</span>
+      <div class="si-params">
+        <span class="si-tag">cara <span style="color:${(s.cara_palo||0)>2?'#f2994a':(s.cara_palo||0)<-2?'#6fcf97':'var(--text)'}">  ${fmtSign(s.cara_palo)}°</span></span>
+        <span class="si-tag">atq <span>${fmtSign(s.angulo_ataque)}°</span></span>
+        <span class="si-tag">cal <span style="color:${(s.calidad||0)>=1.2?'#3cba54':(s.calidad||0)>=1.0?'#f2994a':'#e63946'}">${fmt(s.calidad,3)}</span></span>
+      </div>
+      <button class="si-hide" data-idx="${origIdx}">${isHid?'🚫':'👁'}</button>`;
+    div.querySelector('.si-hide').onclick=e=>{e.stopPropagation();const idx=+e.currentTarget.dataset.idx;hiddenSet.has(idx)?hiddenSet.delete(idx):hiddenSet.add(idx);if(selectedIdx===idx)selectedIdx=null;render();};
+    div.addEventListener('click',e=>{if(e.target.classList.contains('si-hide'))return;selectShotMob(origIdx===selectedIdx?null:origIdx);});
+    list.appendChild(div);
+  });
+}
+
+// ── Filter sheet ──
+function openFilterSheet(){
+  document.getElementById('filter-sheet').classList.add('open');
+  document.getElementById('filter-overlay').classList.add('open');
+  const fp=document.getElementById('filter-content-mob');if(!fp)return;
+  const params=[{k:'dist_total',l:'Dist. total (m)'},{k:'desv_total',l:'Lateral (m)'},{k:'vel_bola',l:'Vel. bola (m/s)'},{k:'cara_palo',l:'Cara palo (°)'},{k:'calidad',l:'Calidad'},{k:'altura_max',l:'Alt. máx (m)'},{k:'retroceso',l:'Backspin (rpm)'}];
+  fp.innerHTML=params.map(({k,l})=>{const cur=tableFilters[k]||{};return`<div class="filter-row-m"><span class="filter-lbl-m">${l}</span><input class="filter-input-m" type="number" placeholder="min" data-k="${k}" data-t="min" value="${cur.min??''}"><span style="color:var(--muted);font-family:'DM Mono',monospace;font-size:.6rem;">–</span><input class="filter-input-m" type="number" placeholder="max" data-k="${k}" data-t="max" value="${cur.max??''}"></div>`;}).join('');
+  fp.querySelectorAll('.filter-input-m').forEach(inp=>{inp.oninput=()=>{const k=inp.dataset.k,t=inp.dataset.t,v=inp.value;if(!tableFilters[k])tableFilters[k]={};tableFilters[k][t]=v;if(!tableFilters[k].min&&!tableFilters[k].max)delete tableFilters[k];};});
+}
+function closeFilterSheet(){document.getElementById('filter-sheet').classList.remove('open');document.getElementById('filter-overlay').classList.remove('open');}
+
+// ── Render ──
+function render(){
+  buildStripMob();
+  buildTabsMob('tabs-mob');
+  buildTabsMob('tabs-stats');
+  buildLegendMob();
+  // Always rebuild map data even if not visible (for hit testing)
+  drawMapMob();
+  // Only rebuild active screen to avoid errors on hidden elements
+  const activeScreen=document.querySelector('.screen.active');
+  const activeId=activeScreen?activeScreen.id:'screen-map';
+  if(activeId==='screen-stats') buildStatsMob();
+  if(activeId==='screen-shots') buildShotList();
+  // Always update shot list count
+  const cntEl=document.getElementById('shot-count-mob');
+  if(cntEl) cntEl.textContent=`${getVisibleShots().length} visibles`;
+}
+
+// ── Init ──
+window.onerror=function(msg,src,line,col,err){
+  const body=document.body;
+  const div=document.createElement('div');
+  div.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#1a0505;color:#f87;font-family:monospace;font-size:11px;padding:8px;z-index:9999;border-top:1px solid #f00;';
+  div.textContent='Error: '+(err?err.message:msg)+' (línea '+line+')';
+  body.appendChild(div);
+  setTimeout(()=>div.remove(),8000);
+  return false;
+};
+(function init(){
+  initCSVLoader();
+  initMapMob();
+  document.getElementById('filter-overlay')?.addEventListener('click',()=>{closeFilterSheet();render();});
+  document.getElementById('sort-mob')?.addEventListener('change',e=>{sortKey=e.target.value;buildShotList();});
+  window.addEventListener('resize',()=>drawMapMob());
+  render();
+})();
+
+</script>
+</body>
+</html>
