@@ -300,7 +300,7 @@ canvas{display:block;width:100%;touch-action:none;}
     <img id="user-avatar" style="width:22px;height:22px;border-radius:50%;object-fit:cover;display:none;" src="" alt="">
     <span id="user-name" style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);"></span>
   </div>
-  <button onclick="window._signOut()" style="font-family:'DM Mono',monospace;font-size:.55rem;padding:.2rem .5rem;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:3px;cursor:pointer;">Salir</button>
+  <button id="logout-btn" onclick="window._signOut()" style="font-family:'DM Mono',monospace;font-size:.55rem;padding:.2rem .5rem;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:3px;cursor:pointer;">Salir</button>
   <button id="lang-toggle" onclick="setLang(LANG==='es'?'en':'es')" style="font-family:'DM Mono',monospace;font-size:.55rem;padding:.2rem .5rem;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:3px;cursor:pointer;">🌐 EN</button>
 </div>
 
@@ -327,17 +327,7 @@ canvas{display:block;width:100%;touch-action:none;}
   <div class="club-scroll" id="tabs-mob"></div>
   <div class="color-row">
     <span class="color-label">Color:</span>
-    <select id="colorBy-mob" onchange="colorBy=this.value;legendFilters=new Set();buildLegendMob();drawMapMob();">
-      <option value="calidad">Calidad</option>
-      <option value="dist_total">Distancia</option>
-      <option value="desv_total">Lateral</option>
-      <option value="cara_palo">Cara palo</option>
-      <option value="efecto_lat">Ef. lateral</option>
-      <option value="angulo_ataque">Ataque</option>
-      <option value="vel_bola">Vel. bola</option>
-      <option value="altura_max">Alt. máx.</option>
-      <option value="retroceso">Backspin</option>
-    </select>
+    <select id="colorBy-mob" onchange="colorBy=this.value;legendFilters=new Set();buildLegendMob();drawMapMob();"></select>
     <button class="reset-mob" onclick="resetAll()">↺ Reset</button>
   </div>
   <div class="legend-scroll" id="legend-mob"></div>
@@ -355,7 +345,7 @@ canvas{display:block;width:100%;touch-action:none;}
     <div class="lat-wrap">
       <div style="font-family:'DM Mono',monospace;font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;" id="lat-lbl-mob">Dispersión lateral</div>
       <div class="lat-field" id="lat-field-mob"><div class="lat-center"></div></div>
-      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:.5rem;color:var(--muted);margin-top:.2rem;"><span>◄ Izq</span><span>Centro</span><span>Der ►</span></div>
+      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:.5rem;color:var(--muted);margin-top:.2rem;"><span id="lat-left-mob">◄ Izq</span><span id="lat-center-mob">Centro</span><span id="lat-right-mob">Der ►</span></div>
     </div>
     <div id="detail-selected"></div>
   </div>
@@ -364,16 +354,8 @@ canvas{display:block;width:100%;touch-action:none;}
 <!-- GOLPES -->
 <div class="screen" id="screen-shots">
   <div class="table-controls-mob">
-    <span style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);flex-shrink:0;">Ordenar:</span>
-    <select id="sort-mob" style="font-family:'DM Mono',monospace;font-size:.6rem;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:.25rem .4rem;">
-      <option value="">—</option>
-      <option value="dist_total">Distancia</option>
-      <option value="desv_total">Lateral</option>
-      <option value="calidad">Calidad</option>
-      <option value="cara_palo">Cara palo</option>
-      <option value="vel_bola">Vel. bola</option>
-      <option value="altura_max">Alt. máx.</option>
-    </select>
+    <span id="sort-label-mob" style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);flex-shrink:0;">Ordenar:</span>
+    <select id="sort-mob" style="font-family:'DM Mono',monospace;font-size:.6rem;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:.25rem .4rem;"></select>
     <button class="reset-mob" onclick="sortDir*=-1;buildShotList()">⇅</button>
     <span id="shot-count-mob" style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);flex-shrink:0;"></span>
   </div>
@@ -400,18 +382,8 @@ canvas{display:block;width:100%;touch-action:none;}
 <div class="screen" id="screen-data">
   <div style="padding:1rem;overflow-y:auto;-webkit-overflow-scrolling:touch;">
 
-    <!-- Toggle histórico / última sesión -->
-    <div style="display:flex;align-items:center;gap:.8rem;padding:.6rem .8rem;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:.8rem;">
-      <div style="flex:1;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:var(--gl);">Modo de visualización</div>
-        <div style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);margin-top:.1rem;">Histórico acumulado vs solo última sesión</div>
-      </div>
-      <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;">
-        <span style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);">Histórico</span>
-        <input type="checkbox" id="toggle-session" style="width:16px;height:16px;cursor:pointer;">
-        <span style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);">Solo última</span>
-      </label>
-    </div>
+    <!-- Toggle histórico / última sesión (hidden — session selection is in the list below) -->
+    <input type="checkbox" id="toggle-session" style="display:none;">
 
     <!-- Upload -->
     <div class="upload-area">
@@ -428,14 +400,14 @@ canvas{display:block;width:100%;touch-action:none;}
 
     <!-- Session list -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.85rem;margin-top:.8rem;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:var(--gl);margin-bottom:.5rem;">Sesiones guardadas</div>
+      <div id="sessions-header" style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:var(--gl);margin-bottom:.5rem;">Sesiones guardadas</div>
       <div id="sessions-list"></div>
     </div>
 
     <!-- Install instructions -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.85rem;margin-top:.8rem;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:var(--gl);margin-bottom:.4rem;">Instalar como App</div>
-      <p style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.9;">
+      <div id="install-header" style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:var(--gl);margin-bottom:.4rem;">Instalar como App</div>
+      <p id="install-text" style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.9;">
         <strong style="color:var(--text)">iPhone (Safari):</strong><br>
         Toca □↑ → "Añadir a pantalla de inicio"<br><br>
         <strong style="color:var(--text)">Android (Chrome):</strong><br>
@@ -450,11 +422,11 @@ canvas{display:block;width:100%;touch-action:none;}
 <div class="filter-overlay" id="filter-overlay"></div>
 <div class="filter-sheet" id="filter-sheet">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gl);">Filtros</div>
-    <button onclick="saveCurrentFilter();" style="font-family:'DM Mono',monospace;font-size:.6rem;padding:.3rem .6rem;background:rgba(233,196,106,.12);color:var(--gold);border:1px solid rgba(233,196,106,.3);border-radius:3px;cursor:pointer;">💾 Guardar filtro</button>
+    <div id="filter-sheet-title" style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gl);">Filtros</div>
+    <button id="filter-save-btn" onclick="saveCurrentFilter();" style="font-family:'DM Mono',monospace;font-size:.6rem;padding:.3rem .6rem;background:rgba(233,196,106,.12);color:var(--gold);border:1px solid rgba(233,196,106,.3);border-radius:3px;cursor:pointer;">💾 Guardar filtro</button>
   </div>
   <div id="filter-content-mob"></div>
-  <button onclick="closeFilterSheet();render();" style="width:100%;margin-top:.8rem;padding:.55rem;border-radius:4px;background:var(--gl);color:#0d1b0f;font-family:'Bebas Neue',sans-serif;font-size:.95rem;border:none;cursor:pointer;">Aplicar</button>
+  <button id="filter-apply-btn" onclick="closeFilterSheet();render();" style="width:100%;margin-top:.8rem;padding:.55rem;border-radius:4px;background:var(--gl);color:#0d1b0f;font-family:'Bebas Neue',sans-serif;font-size:.95rem;border:none;cursor:pointer;">Aplicar</button>
 </div>
 
 <script>
@@ -698,14 +670,21 @@ const CLUB_GROUPS={
   'Todos los hierros':['Hierro 9','Hierro 8','Hierro 7','Hierro 6','Hierro 5'],
 };
 const ALL_PARAMS=[
-  {k:'dist_total',l:'Dist.',u:'m',d:1},{k:'dist_vuelo',l:'Vuelo',u:'m',d:1},
-  {k:'desv_total',l:'Lateral',u:'m',d:1,signed:true},{k:'altura_max',l:'Alt.máx',u:'m',d:1},
-  {k:'vel_palo',l:'VelPalo',u:'m/s',d:1},{k:'vel_bola',l:'VelBola',u:'m/s',d:1},
-  {k:'cara_palo',l:'Cara',u:'°',d:2,signed:true},{k:'linea_cabeza',l:'Línea',u:'°',d:2,signed:true},
-  {k:'angulo_ataque',l:'Ataque',u:'°',d:2,signed:true},{k:'retroceso',l:'Backspin',u:'rpm',d:0},
-  {k:'efecto_lat',l:'EfLat',u:'rpm',d:0,signed:true},{k:'vel_rotacion',l:'VelRot',u:'rpm',d:0},
-  {k:'eje_rotacion',l:'EjeRot',u:'°',d:1,signed:true},{k:'calidad',l:'Calidad',u:'',d:3},
-  {k:'angulo_lanzamiento',l:'ÁngLanz',u:'°',d:1},
+  {k:'dist_total',   l:'Dist.',   le:'Dist.',    u:'m',   d:1},
+  {k:'dist_vuelo',   l:'Vuelo',   le:'Carry',    u:'m',   d:1},
+  {k:'desv_total',   l:'Lateral', le:'Lateral',  u:'m',   d:1,signed:true},
+  {k:'altura_max',   l:'Alt.máx', le:'Max ht',   u:'m',   d:1},
+  {k:'vel_palo',     l:'VelPalo', le:'ClbSpd',   u:'m/s', d:1},
+  {k:'vel_bola',     l:'VelBola', le:'BallSpd',  u:'m/s', d:1},
+  {k:'cara_palo',    l:'Cara',    le:'Face',      u:'°',   d:2,signed:true},
+  {k:'linea_cabeza', l:'Línea',   le:'Path',      u:'°',   d:2,signed:true},
+  {k:'angulo_ataque',l:'Ataque',  le:'AoA',       u:'°',   d:2,signed:true},
+  {k:'retroceso',    l:'Backspin',le:'Backspin',  u:'rpm', d:0},
+  {k:'efecto_lat',   l:'EfLat',   le:'SideSpin',  u:'rpm', d:0,signed:true},
+  {k:'vel_rotacion', l:'VelRot',  le:'SpinRate',  u:'rpm', d:0},
+  {k:'eje_rotacion', l:'EjeRot',  le:'SpinAxis',  u:'°',   d:1,signed:true},
+  {k:'calidad',      l:'Calidad', le:'Smash',     u:'',    d:3},
+  {k:'angulo_lanzamiento',l:'ÁngLanz',le:'Launch',u:'°',   d:1},
 ];
 
 // ── DRILLS LIBRARY (ES + EN, symmetric) ────────────────────────
@@ -890,6 +869,9 @@ function applyLang(){
   // Lang toggle button
   const btn = document.getElementById('lang-toggle');
   if(btn) btn.textContent = LANG==='en' ? '🌐 ES' : '🌐 EN';
+  // Logout button
+  const logoutBtn = document.getElementById('logout-btn');
+  if(logoutBtn) logoutBtn.textContent = t('Salir','Sign out');
   // Upload area
   const uploadTitle = document.querySelector('.upload-title');
   if(uploadTitle) uploadTitle.textContent = t('Cargar Sesión','Load Session');
@@ -900,15 +882,70 @@ function applyLang(){
   );
   const uploadBtn = document.querySelector('label[for="csvInput-mob"]');
   if(uploadBtn) uploadBtn.textContent = t('📁 Seleccionar CSV','📁 Select CSV');
+  // Upload initial status text (only when it's the placeholder)
+  const statusEl = document.getElementById('upload-status-mob');
+  if(statusEl && ['Carga tu primera sesión','Load your first session'].includes(statusEl.textContent))
+    statusEl.textContent = t('Carga tu primera sesión','Load your first session');
   // Sessions header
-  const sessHeader = document.querySelector('#screen-data .sessions-header');
+  const sessHeader = document.getElementById('sessions-header');
   if(sessHeader) sessHeader.textContent = t('Sesiones guardadas','Saved sessions');
+  // Install section
+  const installHdr = document.getElementById('install-header');
+  if(installHdr) installHdr.textContent = t('Instalar como App','Install as App');
+  const installTxt = document.getElementById('install-text');
+  if(installTxt) installTxt.innerHTML = t(
+    '<strong style="color:var(--text)">iPhone (Safari):</strong><br>Toca □↑ → "Añadir a pantalla de inicio"<br><br><strong style="color:var(--text)">Android (Chrome):</strong><br>Menú ⋮ → "Instalar aplicación"',
+    '<strong style="color:var(--text)">iPhone (Safari):</strong><br>Tap □↑ → "Add to Home Screen"<br><br><strong style="color:var(--text)">Android (Chrome):</strong><br>Menu ⋮ → "Install app"'
+  );
   // Color label
   const colorLabel = document.querySelector('.color-label');
   if(colorLabel) colorLabel.textContent = t('Color:','Color:');
-  // Toggle session
-  const togLabel = document.getElementById('toggle-last-label');
-  if(togLabel) togLabel.innerHTML = t('Histórico','History') + ' <input type="checkbox" id="toggle-session" style="width:16px;height:16px;cursor:pointer;"> ' + t('Solo última','Last only');
+  // Color selector — rebuild options preserving current value
+  const colorSel = document.getElementById('colorBy-mob');
+  if(colorSel){
+    const cur = colorSel.value || colorBy;
+    colorSel.innerHTML=[
+      ['calidad',      t('Calidad','Quality')],
+      ['dist_total',   t('Distancia','Distance')],
+      ['desv_total',   t('Lateral','Lateral')],
+      ['cara_palo',    t('Cara palo','Face angle')],
+      ['efecto_lat',   t('Ef. lateral','Side spin')],
+      ['angulo_ataque',t('Ataque','Attack angle')],
+      ['vel_bola',     t('Vel. bola','Ball speed')],
+      ['altura_max',   t('Alt. máx.','Max height')],
+      ['retroceso',    'Backspin'],
+    ].map(([v,l])=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`).join('');
+  }
+  // Sort label + selector
+  const sortLbl = document.getElementById('sort-label-mob');
+  if(sortLbl) sortLbl.textContent = t('Ordenar:','Sort:');
+  const sortSel = document.getElementById('sort-mob');
+  if(sortSel){
+    const cur = sortSel.value || sortKey;
+    sortSel.innerHTML=[
+      ['',           '—'],
+      ['dist_total', t('Distancia','Distance')],
+      ['desv_total', t('Lateral','Lateral')],
+      ['calidad',    t('Calidad','Quality')],
+      ['cara_palo',  t('Cara palo','Face angle')],
+      ['vel_bola',   t('Vel. bola','Ball speed')],
+      ['altura_max', t('Alt. máx.','Max height')],
+    ].map(([v,l])=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`).join('');
+  }
+  // Lateral direction labels (Stats tab)
+  const latLeft = document.getElementById('lat-left-mob');
+  if(latLeft) latLeft.textContent = t('◄ Izq','◄ L');
+  const latCtr = document.getElementById('lat-center-mob');
+  if(latCtr) latCtr.textContent = t('Centro','Center');
+  const latRight = document.getElementById('lat-right-mob');
+  if(latRight) latRight.textContent = t('Der ►','R ►');
+  // Filter sheet
+  const filterTitle = document.getElementById('filter-sheet-title');
+  if(filterTitle) filterTitle.textContent = t('Filtros','Filters');
+  const filterSaveBtn = document.getElementById('filter-save-btn');
+  if(filterSaveBtn) filterSaveBtn.textContent = t('💾 Guardar filtro','💾 Save filter');
+  const filterApplyBtn = document.getElementById('filter-apply-btn');
+  if(filterApplyBtn) filterApplyBtn.textContent = t('Aplicar','Apply');
 }
 
 // ═══════════════════════════════════════════════════════════════
