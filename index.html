@@ -10,7 +10,106 @@
 <meta name="theme-color" content="#0d1b0f">
 <title>Golf Stats</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
+<!-- Firebase SDK (compat — no type=module, works with inline onclick handlers) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
+<script>
+// ═══════════════════════════════════════════════════════════════
+// FIREBASE CONFIG
+// ═══════════════════════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey:            "AIzaSyBqtmCml3jtA_NXr7sMfl5f_MdAPaFH50A",
+  authDomain:        "data-golf-sim.firebaseapp.com",
+  projectId:         "data-golf-sim",
+  storageBucket:     "data-golf-sim.firebasestorage.app",
+  messagingSenderId: "654142277323",
+  appId:             "1:654142277323:web:eb34fc22c3b3ab244f7d4e"
+};
+
+firebase.initializeApp(firebaseConfig);
+const _auth = firebase.auth();
+const _db   = firebase.firestore();
+
+// ── Auth state listener ──
+_auth.onAuthStateChanged(user => {
+  if (user) {
+    document.getElementById('login-screen').style.display = 'none';
+    document.getElementById('app-root').style.display     = 'flex';
+    document.getElementById('user-name').textContent      = user.displayName || user.email;
+    const av = document.getElementById('user-avatar');
+    av.src = user.photoURL || ''; av.style.display = user.photoURL ? 'block' : 'none';
+    window._loadSessionsFromFirestore(user.uid);
+  } else {
+    document.getElementById('login-screen').style.display = 'flex';
+    document.getElementById('app-root').style.display     = 'none';
+  }
+});
+
+// ── Login con Google ──
+window._signInGoogle = async function() {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  try {
+    await _auth.signInWithPopup(provider);
+  } catch(e) {
+    const el = document.getElementById('login-error');
+    if(el) el.textContent = 'Error: ' + e.message;
+    console.error('Login error', e);
+  }
+};
+
+// ── Logout ──
+window._signOut = async function() {
+  await _auth.signOut();
+  ALL_SESSIONS = []; SHOTS_CURRENT = []; CLUBS = [];
+  CLUB_COLORS = {}; CLUB_ABBR = {};
+  render();
+};
+
+// ── Cargar sesiones desde Firestore ──
+window._loadSessionsFromFirestore = async function(uid) {
+  const statusEl = document.getElementById('upload-status-mob');
+  try {
+    if(statusEl) statusEl.textContent = '⏳ Cargando sesiones...';
+    const snap = await _db.collection('users').doc(uid)
+                          .collection('sessions').orderBy('id').get();
+    ALL_SESSIONS = [];
+    snap.forEach(d => ALL_SESSIONS.push(d.data()));
+    if(ALL_SESSIONS.length) {
+      applySessionData();
+      if(statusEl) statusEl.textContent = `✅ ${ALL_SESSIONS.length} ${LANG==='en'?'sessions loaded':'sesiones cargadas'}`;
+    } else {
+      if(statusEl) statusEl.textContent = LANG==='en'?'No sessions yet.':'Sin sesiones guardadas aún.';
+    }
+    buildDataScreen(); render();
+  } catch(e) {
+    console.error('Error cargando sesiones:', e);
+    if(statusEl) statusEl.textContent = '⚠ ' + e.message;
+  }
+};
+
+// ── Subir sesión a Firestore ──
+window._saveSessionToFirestore = async function(session) {
+  const user = _auth.currentUser;
+  if(!user) return;
+  try {
+    await _db.collection('users').doc(user.uid)
+             .collection('sessions').doc(String(session.id)).set(session);
+  } catch(e) { console.error('Error guardando sesión:', e); }
+};
+
+// ── Eliminar sesión de Firestore ──
+window._deleteSessionFromFirestore = async function(sessionId) {
+  const user = _auth.currentUser;
+  if(!user) return;
+  try {
+    await _db.collection('users').doc(user.uid)
+             .collection('sessions').doc(String(sessionId)).delete();
+  } catch(e) { console.error('Error eliminando sesión:', e); }
+};
+</script>
 <style>
+
 
 :root{--green:#2d6a4f;--gl:#52b788;--gold:#e9c46a;--red:#e63946;--orange:#f2994a;--dark:#0d1b0f;--card:#162318;--text:#e8f5e9;--muted:#7a9e84;--border:#2a3d2d;}
 *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -131,14 +230,85 @@ canvas{display:block;width:100%;touch-action:none;}
 .sg-box{background:var(--card);border:1px solid var(--border);border-radius:5px;padding:.6rem .7rem;text-align:center;}
 .sg-val{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;line-height:1;}
 .sg-lbl{font-family:'DM Mono',monospace;font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:.15rem;}
+
+
+/* Progress & Analysis */
+.analysis-section{margin-bottom:1rem;}
+.analysis-title{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--gl);letter-spacing:.04em;margin-bottom:.5rem;padding-bottom:.3rem;border-bottom:1px solid var(--border);}
+.analysis-card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.75rem .85rem;margin-bottom:.55rem;}
+.ac-head{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;flex-wrap:wrap;}
+.ac-badge{font-family:'DM Mono',monospace;font-size:.52rem;padding:.15rem .4rem;border-radius:3px;flex-shrink:0;}
+.badge-red{background:rgba(230,57,70,.2);color:#e63946;}
+.badge-orange{background:rgba(242,153,74,.2);color:#f2994a;}
+.badge-green{background:rgba(82,183,136,.2);color:#52b788;}
+.ac-stat{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.8;background:rgba(0,0,0,.2);padding:.35rem .55rem;border-radius:3px;margin-bottom:.4rem;}
+.ac-stat span{color:var(--text);}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.7rem;}
+.sg-box{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:.55rem .6rem;text-align:center;}
+.sg-val{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;line-height:1;}
+.sg-lbl{font-family:'DM Mono',monospace;font-size:.5rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:.12rem;}
+
 </style>
 </head>
 <body>
 
+<!-- ═══════════════════════════════════════════════════════════════
+     PANTALLA DE LOGIN
+═══════════════════════════════════════════════════════════════ -->
+<div id="login-screen" style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;background:var(--dark);padding:2rem;gap:1.5rem;">
+  <div style="text-align:center;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:3.5rem;color:var(--gl);letter-spacing:.06em;line-height:1;">Golf <span style="color:var(--gold);">Stats</span></div>
+    <div style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);margin-top:.4rem;letter-spacing:.08em;">DRIVING RANGE ANALYTICS</div>
+  </div>
+
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:2rem 1.5rem;width:100%;max-width:340px;text-align:center;">
+    <div style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--muted);margin-bottom:1.5rem;line-height:1.7;">
+      Inicia sesión para sincronizar tus sesiones<br>entre todos tus dispositivos.
+    </div>
+
+    <button onclick="window._signInGoogle()" style="
+      display:flex;align-items:center;justify-content:center;gap:.75rem;
+      width:100%;padding:.85rem 1rem;border-radius:8px;
+      background:#fff;color:#1f1f1f;
+      font-family:'DM Sans',sans-serif;font-size:.9rem;font-weight:600;
+      border:none;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.3);">
+      <svg width="18" height="18" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
+        <path d="M17.64 9.2c0-.637-.057-1.251-.164-1.84H9v3.481h4.844a4.14 4.14 0 0 1-1.796 2.716v2.259h2.908c1.702-1.567 2.684-3.875 2.684-6.615Z" fill="#4285F4"/>
+        <path d="M9 18c2.43 0 4.467-.806 5.956-2.18l-2.908-2.259c-.806.54-1.837.86-3.048.86-2.344 0-4.328-1.584-5.036-3.711H.957v2.332A8.997 8.997 0 0 0 9 18Z" fill="#34A853"/>
+        <path d="M3.964 10.71A5.41 5.41 0 0 1 3.682 9c0-.593.102-1.17.282-1.71V4.958H.957A8.996 8.996 0 0 0 0 9c0 1.452.348 2.827.957 4.042l3.007-2.332Z" fill="#FBBC05"/>
+        <path d="M9 3.58c1.321 0 2.508.454 3.44 1.345l2.582-2.58C13.463.891 11.426 0 9 0A8.997 8.997 0 0 0 .957 4.958L3.964 6.29C4.672 4.163 6.656 3.58 9 3.58Z" fill="#EA4335"/>
+      </svg>
+      Continuar con Google
+    </button>
+
+    <div id="login-error" style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--red);margin-top:.8rem;min-height:1rem;"></div>
+  </div>
+
+  <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);text-align:center;line-height:1.7;opacity:.6;">
+    Tus datos se guardan de forma segura.<br>Solo tú puedes acceder a tus sesiones.
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     APP PRINCIPAL (visible solo al loguearse)
+═══════════════════════════════════════════════════════════════ -->
+<div id="app-root" style="display:none;flex-direction:column;height:100%;">
+
+<!-- User bar -->
+<div style="display:flex;align-items:center;justify-content:space-between;padding:.4rem .8rem;background:#070f08;border-bottom:1px solid var(--border);flex-shrink:0;">
+  <div style="display:flex;align-items:center;gap:.5rem;">
+    <img id="user-avatar" style="width:22px;height:22px;border-radius:50%;object-fit:cover;display:none;" src="" alt="">
+    <span id="user-name" style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);"></span>
+  </div>
+  <button onclick="window._signOut()" style="font-family:'DM Mono',monospace;font-size:.55rem;padding:.2rem .5rem;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:3px;cursor:pointer;">Salir</button>
+  <button id="lang-toggle" onclick="setLang(LANG==='es'?'en':'es')" style="font-family:'DM Mono',monospace;font-size:.55rem;padding:.2rem .5rem;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:3px;cursor:pointer;">🌐 EN</button>
+</div>
+
 <div class="mob-header">
   <div class="mob-logo">Golf <span>Stats</span></div>
   <div class="mob-sub">
-    <span id="equip-text" contenteditable="true" spellcheck="false" style="border-bottom:1px dashed rgba(82,183,136,.4);outline:none;cursor:text;">Titleist AP2 716</span>
+    <span id="equip-text" contenteditable="true" spellcheck="false"
+      style="border-bottom:1px dashed rgba(82,183,136,.4);outline:none;cursor:text;">Titleist AP2 716</span>
   </div>
 </div>
 
@@ -146,8 +316,9 @@ canvas{display:block;width:100%;touch-action:none;}
   <div class="nav-tab active" data-screen="screen-map" onclick="showScreen('screen-map',this)">🗺 Campo</div>
   <div class="nav-tab" data-screen="screen-stats" onclick="showScreen('screen-stats',this)">📊 Stats</div>
   <div class="nav-tab" data-screen="screen-shots" onclick="showScreen('screen-shots',this)">📋 Golpes</div>
-  <div class="nav-tab" data-screen="screen-data" onclick="showScreen('screen-data',this)">📂 Datos</div>
   <div class="nav-tab" data-screen="screen-analysis" onclick="showScreen('screen-analysis',this)">🎯 Análisis</div>
+  <div class="nav-tab" data-screen="screen-progress" onclick="showScreen('screen-progress',this)">📈 Progreso</div>
+  <div class="nav-tab" data-screen="screen-data" onclick="showScreen('screen-data',this)">📂 Datos</div>
 </div>
 
 <!-- CAMPO -->
@@ -206,60 +377,88 @@ canvas{display:block;width:100%;touch-action:none;}
     <button class="reset-mob" onclick="sortDir*=-1;buildShotList()">⇅</button>
     <span id="shot-count-mob" style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);flex-shrink:0;"></span>
   </div>
+  <!-- Club filter independent from main -->
+  <div class="club-scroll" id="shots-club-filter" style="padding:.4rem .6rem;background:rgba(0,0,0,.2);border-bottom:1px solid var(--border);"></div>
   <div class="shot-list" id="shot-list"></div>
+</div>
+
+<!-- ANÁLISIS -->
+<div class="screen" id="screen-analysis">
+  <div style="padding:.8rem;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+    <div id="analysis-content"></div>
+  </div>
+</div>
+
+<!-- PROGRESO -->
+<div class="screen" id="screen-progress">
+  <div style="padding:.8rem;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+    <div id="progress-content"></div>
+  </div>
 </div>
 
 <!-- DATOS -->
 <div class="screen" id="screen-data">
-  <div style="padding:1rem;">
+  <div style="padding:1rem;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+
+    <!-- Toggle histórico / última sesión -->
+    <div style="display:flex;align-items:center;gap:.8rem;padding:.6rem .8rem;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:.8rem;">
+      <div style="flex:1;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:var(--gl);">Modo de visualización</div>
+        <div style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);margin-top:.1rem;">Histórico acumulado vs solo última sesión</div>
+      </div>
+      <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;">
+        <span style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);">Histórico</span>
+        <input type="checkbox" id="toggle-session" style="width:16px;height:16px;cursor:pointer;">
+        <span style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);">Solo última</span>
+      </label>
+    </div>
+
+    <!-- Upload -->
     <div class="upload-area">
       <div class="upload-icon">📂</div>
       <div class="upload-title">Cargar Sesión</div>
-      <div class="upload-sub">Selecciona el CSV de tu launch monitor<br>(Trackman, GC2, FlightScope, etc.)</div>
-      <label for="csvInput-mob" style="display:block;width:100%;padding:.8rem;border-radius:6px;background:var(--gl);color:#0d1b0f;font-family:'Bebas Neue',sans-serif;font-size:1.2rem;letter-spacing:.06em;text-align:center;cursor:pointer;box-sizing:border-box;">
+      <div class="upload-sub">Cada sesión se guarda automáticamente en la nube.<br>Acumula el historial para ver tu progreso.</div>
+      <label for="csvInput-mob" style="display:block;width:100%;padding:.75rem;border-radius:6px;background:var(--gl);color:#0d1b0f;font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.06em;text-align:center;cursor:pointer;box-sizing:border-box;">
         📁 Seleccionar CSV
       </label>
       <input type="file" id="csvInput-mob" accept=".csv,.CSV"
              style="position:absolute;left:-9999px;opacity:0;width:1px;height:1px;">
-      <div class="upload-status" id="upload-status-mob">Sesión cargada: 24 Abr 2026 · 137 golpes</div>
+      <div class="upload-status" id="upload-status-mob">Carga tu primera sesión</div>
     </div>
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.9rem;margin-top:.8rem;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--gl);margin-bottom:.5rem;">Sesión Actual</div>
-      <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);line-height:2;" id="session-info">
-        📅 Fecha: 24 Abril 2026<br>⛳ Palos: SW, PW, H9, H8, H7, H6, H5<br>🎯 Golpes totales: 137<br>🌡 Temperatura: 16.4°C<br>🌬 Presión: 95.82 kPa
-      </div>
+
+    <!-- Session list -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.85rem;margin-top:.8rem;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:var(--gl);margin-bottom:.5rem;">Sesiones guardadas</div>
+      <div id="sessions-list"></div>
     </div>
-    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.9rem;margin-top:.8rem;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--gl);margin-bottom:.5rem;">Instalar como App</div>
+
+    <!-- Install instructions -->
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.85rem;margin-top:.8rem;">
+      <div style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:var(--gl);margin-bottom:.4rem;">Instalar como App</div>
       <p style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.9;">
-        <strong style="color:var(--text)">iPhone / iPad (Safari):</strong><br>
-        1. Toca el botón compartir (□↑)<br>
-        2. "Añadir a pantalla de inicio"<br>
-        3. Listo — icono en tu pantalla 📲<br><br>
+        <strong style="color:var(--text)">iPhone (Safari):</strong><br>
+        Toca □↑ → "Añadir a pantalla de inicio"<br><br>
         <strong style="color:var(--text)">Android (Chrome):</strong><br>
-        1. Menú ⋮ → "Instalar aplicación"
+        Menú ⋮ → "Instalar aplicación"
       </p>
     </div>
   </div>
 </div>
 
-<!-- ANÁLISIS -->
-<div class="screen" id="screen-analysis">
-  <div style="padding:.8rem;overflow-y:auto;">
-    <div id="analysis-content"></div>
-  </div>
-</div>
-
-<!-- Filtro FAB -->
+<!-- Filter FAB -->
 <button class="filter-fab" onclick="openFilterSheet()" title="Filtros">⚙</button>
 <div class="filter-overlay" id="filter-overlay"></div>
 <div class="filter-sheet" id="filter-sheet">
-  <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gl);margin-bottom:.8rem;">Filtrar por rango</div>
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;">
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gl);">Filtros</div>
+    <button onclick="saveCurrentFilter();" style="font-family:'DM Mono',monospace;font-size:.6rem;padding:.3rem .6rem;background:rgba(233,196,106,.12);color:var(--gold);border:1px solid rgba(233,196,106,.3);border-radius:3px;cursor:pointer;">💾 Guardar filtro</button>
+  </div>
   <div id="filter-content-mob"></div>
-  <button onclick="closeFilterSheet();render();" style="width:100%;margin-top:.8rem;padding:.6rem;border-radius:4px;background:var(--gl);color:#0d1b0f;font-family:'Bebas Neue',sans-serif;font-size:1rem;border:none;cursor:pointer;">Aplicar</button>
+  <button onclick="closeFilterSheet();render();" style="width:100%;margin-top:.8rem;padding:.55rem;border-radius:4px;background:var(--gl);color:#0d1b0f;font-family:'Bebas Neue',sans-serif;font-size:.95rem;border:none;cursor:pointer;">Aplicar</button>
 </div>
 
 <script>
+
 const SHOTS = [{"fecha":"24/4/26 8:15:48","palo":"Sand Wedge","vel_palo":30.77,"angulo_ataque":-0.5,"linea_cabeza":4.98,"cara_palo":3.74,"cara_a_linea":-1.24,"vel_bola":27.11,"calidad":0.881,"angulo_lanzamiento":38.76,"dir_lanzamiento":3.69,"retroceso":6383.18,"efecto_lat":-66.85,"vel_rotacion":6383.53,"eje_rotacion":0.6,"altura_max":16.23,"dist_vuelo":58.06,"ang_desv_vuelo":3.85,"desv_vuelo":3.9,"dist_total":61.35,"ang_desv_total":3.86,"desv_total":4.13},
 {"fecha":"24/4/26 8:16:00","palo":"Sand Wedge","vel_palo":34.05,"angulo_ataque":1.02,"linea_cabeza":3.0,"cara_palo":-7.55,"cara_a_linea":-10.55,"vel_bola":39.29,"calidad":1.154,"angulo_lanzamiento":21.91,"dir_lanzamiento":-5.83,"retroceso":6083.56,"efecto_lat":2360.88,"vel_rotacion":6525.6,"eje_rotacion":-21.21,"altura_max":17.12,"dist_vuelo":101.96,"ang_desv_vuelo":-13.79,"desv_vuelo":-24.31,"dist_total":109.97,"ang_desv_total":-14.31,"desv_total":-27.18},
 {"fecha":"24/4/26 8:16:14","palo":"Sand Wedge","vel_palo":35.78,"angulo_ataque":-1.62,"linea_cabeza":8.19,"cara_palo":1.31,"cara_a_linea":-6.88,"vel_bola":33.01,"calidad":0.923,"angulo_lanzamiento":38.89,"dir_lanzamiento":2.1,"retroceso":6404.08,"efecto_lat":1175.37,"vel_rotacion":6511.05,"eje_rotacion":-10.4,"altura_max":24.19,"dist_vuelo":76.25,"ang_desv_vuelo":-1.54,"desv_vuelo":-2.05,"dist_total":79.54,"ang_desv_total":-1.65,"desv_total":-2.29},
@@ -431,10 +630,73 @@ const COLOR_CONFIG={
     fn:(v,mn,mx)=>{const t=mx>mn?(v-mn)/(mx-mn):0.5;return `hsl(${Math.round(t*200+180)},70%,52%)`;}},
 };
 
+// ═══════════════════════════════════════════════════════════════
+// CONSTANTS & CLUB DEFS
+// ═══════════════════════════════════════════════════════════════
+// ── Dynamic club colors — auto-assigned from loaded session ──────────────
+// Base palette: 24 visually distinct colors that work on dark background
+const COLOR_PALETTE=[
+  '#a8dadc','#90e0ef','#80ed99','#57cc99','#38a3a5','#e9c46a','#f4a261',
+  '#e63946','#f72585','#b5179e','#7209b7','#3a0ca3','#4361ee','#4cc9f0',
+  '#06d6a0','#ffd166','#ef476f','#118ab2','#073b4c','#cbf3f0','#ffbf69',
+  '#ff9f1c','#2ec4b6','#cbf3f0',
+];
 
-const CLUB_COLORS={"Sand Wedge":"#a8dadc","Pitching Wedge":"#90e0ef","Hierro 9":"#80ed99","Hierro 8":"#57cc99","Hierro 7":"#38a3a5","Hierro 6":"#e9c46a","Hierro 5":"#f4a261"};
-const CLUB_ABBR={"Sand Wedge":"SW","Pitching Wedge":"PW","Hierro 9":"H9","Hierro 8":"H8","Hierro 7":"H7","Hierro 6":"H6","Hierro 5":"H5"};
-const CLUBS=Object.keys(CLUB_COLORS);
+// Known abbrevations — extended list
+const KNOWN_ABBR={
+  'Sand Wedge':'SW','Pitching Wedge':'PW','Gap Wedge':'GW','Lob Wedge':'LW',
+  'Hierro 9':'H9','Hierro 8':'H8','Hierro 7':'H7','Hierro 6':'H6',
+  'Hierro 5':'H5','Hierro 4':'H4','Hierro 3':'H3','Hierro 2':'H2',
+  'Hierro 1':'H1','3 Hierro':'3H','4 Hierro':'4H','5 Hierro':'5H',
+  '6 Hierro':'6H','7 Hierro':'7H','8 Hierro':'8H','9 Hierro':'9H',
+  'Driver':'DRV','3 Madera':'3M','5 Madera':'5M','7 Madera':'7M',
+  'Madera 3':'3M','Madera 5':'5M','Madera 7':'7M',
+  'Híbrido 3':'HB3','Híbrido 4':'HB4','Híbrido 5':'HB5',
+  'Hybrid 3':'HB3','Hybrid 4':'HB4','Hybrid 5':'HB5',
+  '3 Wood':'3W','5 Wood':'5W','7 Wood':'7W',
+};
+
+// These get populated dynamically when a session loads
+let CLUB_COLORS={};
+let CLUB_ABBR={};
+let CLUBS=[];
+
+function assignClubColors(shots){
+  const palos=[...new Set(shots.map(s=>s.palo).filter(Boolean))];
+  // Sort by typical bag order
+  const ORDER=['Driver','Madera','Wood','Híbrido','Hybrid','Hierro 1','Hierro 2',
+    'Hierro 3','Hierro 4','Hierro 5','Hierro 6','Hierro 7','Hierro 8','Hierro 9',
+    'Pitching','Gap','Lob','Sand'];
+  palos.sort((a,b)=>{
+    const ai=ORDER.findIndex(o=>a.includes(o.split(' ')[0]));
+    const bi=ORDER.findIndex(o=>b.includes(o.split(' ')[0]));
+    return (ai===-1?99:ai)-(bi===-1?99:bi);
+  });
+  CLUB_COLORS={};CLUB_ABBR={};
+  palos.forEach((palo,i)=>{
+    CLUB_COLORS[palo]=COLOR_PALETTE[i%COLOR_PALETTE.length];
+    // Generate abbreviation
+    if(KNOWN_ABBR[palo]){CLUB_ABBR[palo]=KNOWN_ABBR[palo];}
+    else{
+      // Auto-generate: take first letter of each word, max 3 chars
+      const words=palo.trim().split(/\s+/);
+      let abbr=words.map(w=>w[0]?.toUpperCase()||'').join('').slice(0,3);
+      // If it's "X N" pattern (e.g. "Hierro 9"), use last word as number
+      if(words.length>=2&&/^\d+$/.test(words[words.length-1])){
+        abbr=words[0][0].toUpperCase()+words[words.length-1];
+      }
+      CLUB_ABBR[palo]=abbr||palo.slice(0,3).toUpperCase();
+    }
+  });
+  CLUBS=palos;
+}
+const CLUB_GROUPS={
+  'Wedges':['Sand Wedge','Pitching Wedge'],
+  'Hierros cortos':['Hierro 9','Hierro 8'],
+  'Hierros medios':['Hierro 7','Hierro 6'],
+  'Hierros largos':['Hierro 5'],
+  'Todos los hierros':['Hierro 9','Hierro 8','Hierro 7','Hierro 6','Hierro 5'],
+};
 const ALL_PARAMS=[
   {k:'dist_total',l:'Dist.',u:'m',d:1},{k:'dist_vuelo',l:'Vuelo',u:'m',d:1},
   {k:'desv_total',l:'Lateral',u:'m',d:1,signed:true},{k:'altura_max',l:'Alt.máx',u:'m',d:1},
@@ -446,21 +708,274 @@ const ALL_PARAMS=[
   {k:'angulo_lanzamiento',l:'ÁngLanz',u:'°',d:1},
 ];
 
-// ── State ──
-let SHOTS_CURRENT = typeof SHOTS !== 'undefined' ? SHOTS.slice() : [];
-let activeClub='Todos', selectedIdx=null, hiddenSet=new Set();
-let colorBy='calidad', sortKey='', sortDir=1;
-let legendFilters=new Set(), tableFilters={};
-let canvasHitShots=[];
+// ── DRILLS LIBRARY (ES + EN, symmetric) ────────────────────────
+const DRILLS = {
+  // OUT-TO-IN path (positive club path / linea_cabeza > 0)
+  path_out_to_in:{
+    es:[
+      {name:'Drill de la toalla',desc:'Pon una toalla enrollada a la derecha de la bola. Pasa el palo por dentro sin tocarla. Si la tocas, el camino viene demasiado desde fuera.',freq:'20 bolas/sesión',clubs:'Todos'},
+      {name:'Palo en el suelo',desc:'Coloca un palo en el suelo apuntando al target. Practica swings sintiendo que el palo baja paralelo al del suelo o más por dentro.',freq:'15 bolas/sesión',clubs:'PW, H8'},
+      {name:'Headcover bajo el brazo',desc:'Coloca un headcover bajo el brazo derecho durante el swing. Si cae antes del impacto, el brazo derecho se separa demasiado pronto.',freq:'10 repeticiones',clubs:'Todos'},
+      {name:'Swing en L',desc:'Haz swings cortos de 9 a 3. Siente que atacas "desde dentro" con swings pequeños antes de alargar.',freq:'20 bolas',clubs:'PW'},
+      {name:'Alignment stick',desc:'Pon un alignment stick apuntando 5° a la derecha. Practica que la bola salga hacia donde apunta.',freq:'Series de 10',clubs:'Todos'},
+    ],
+    en:[
+      {name:'Towel drill',desc:'Place a rolled towel to the right of the ball. Swing without touching it — if you do, your path is coming too far from outside.',freq:'20 balls/session',clubs:'All'},
+      {name:'Shaft on the ground',desc:'Lay a club on the ground pointing at the target. Feel the club descend parallel to it — or more from inside.',freq:'15 balls/session',clubs:'PW, H8'},
+      {name:'Headcover under arm',desc:'Place a headcover under your right arm. If it falls before impact, your right arm is releasing too early.',freq:'10 reps',clubs:'All'},
+      {name:'L-to-L swing',desc:'Hit half-swings (9 o\'clock to 3 o\'clock). Feel the "attack from inside" with short swings before lengthening.',freq:'20 balls',clubs:'PW'},
+      {name:'Alignment stick',desc:'Place a stick pointing 5° right of target. Train the ball to start in that direction.',freq:'Sets of 10',clubs:'All'},
+    ],
+  },
+  // IN-TO-OUT path (negative club path / linea_cabeza < 0) — the missing case
+  path_in_to_out:{
+    es:[
+      {name:'Barrera externa',desc:'Coloca un alignment stick en el suelo a la izquierda del target line. El objetivo es sentir que el palo pasa por fuera del stick en el downswing.',freq:'15 bolas',clubs:'Todos'},
+      {name:'Toalla en el lado izquierdo',desc:'Pon una toalla enrollada a la izquierda de la bola. Entrena pasar el palo por el lado exterior sin tocarla.',freq:'20 bolas',clubs:'Todos'},
+      {name:'Grip más neutral',desc:'Gira ambas manos hacia la izquierda (grip más débil). Un grip demasiado fuerte favorece un camino excesivamente in-to-out.',freq:'Cada sesión',clubs:'Todos'},
+      {name:'Rotación de cadera activa',desc:'Inicia el downswing girando la cadera hacia el target ANTES de mover los brazos. Esto evita que los brazos "ataquen por dentro" en exceso.',freq:'20 repeticiones',clubs:'Todos'},
+      {name:'Shoulder plane drill',desc:'En el backswing, siente que el hombro izquierdo apunta al suelo frente a la bola. Esto equilibra el plano y evita swings excesivamente planos.',freq:'10 bolas',clubs:'H5, H6, H7'},
+    ],
+    en:[
+      {name:'External barrier',desc:'Place an alignment stick on the ground left of the target line. Feel the club travel outside that stick through the downswing.',freq:'15 balls',clubs:'All'},
+      {name:'Left-side towel',desc:'Place a rolled towel to the left of the ball. Train the club to pass to the outside without touching it.',freq:'20 balls',clubs:'All'},
+      {name:'Neutral grip',desc:'Rotate both hands slightly left (weaker grip). An overly strong grip promotes an excessively in-to-out path.',freq:'Every session',clubs:'All'},
+      {name:'Active hip rotation',desc:'Start the downswing by rotating hips toward the target BEFORE moving your arms. This prevents the arms from attacking too much from the inside.',freq:'20 reps',clubs:'All'},
+      {name:'Shoulder plane drill',desc:'In the backswing, feel the left shoulder pointing to the ground in front of the ball. This balances the plane and avoids overly flat swings.',freq:'10 balls',clubs:'H5, H6, H7'},
+    ],
+  },
+  // OPEN FACE
+  cara_abierta:{
+    es:[
+      {name:'Grip check diario',desc:'2-3 nudillos visibles en la mano izquierda al address. Si solo ves 1, el grip es demasiado débil.',freq:'Cada sesión',clubs:'Todos'},
+      {name:'Drill de la moneda',desc:'Pon una moneda bajo el talón del grip. Si se cae en el backswing, estás abriendo la cara.',freq:'10 repeticiones',clubs:'H6, H7'},
+      {name:'Mirror drill',desc:'Lleva el palo a las 9h. El filo debe apuntar al cielo. Si apunta hacia fuera, la cara está abierta.',freq:'5 min en casa',clubs:'H6'},
+      {name:'Forearm rotation',desc:'Siente que el antebrazo izquierdo rota hacia dentro antes del impacto.',freq:'20 repeticiones',clubs:'H6, H5'},
+      {name:'Impact bag',desc:'Golpea el impact bag sintiendo la cara cuadrada. Mantén posición 3 segundos.',freq:'15 golpes',clubs:'Todos'},
+    ],
+    en:[
+      {name:'Daily grip check',desc:'See 2-3 knuckles on your left hand at address. If you only see 1, your grip is too weak (promotes open face).',freq:'Every session',clubs:'All'},
+      {name:'Coin drill',desc:'Place a coin under the grip\'s heel. If it falls during backswing, you\'re opening the face. Keep it until impact.',freq:'10 reps',clubs:'H6, H7'},
+      {name:'Mirror drill',desc:'Take the club to 9 o\'clock. The leading edge should point to the sky — if it points outward, the face is open.',freq:'5 min at home',clubs:'H6'},
+      {name:'Forearm rotation',desc:'Feel the left forearm rotate inward (supination) just before impact. Practice wrist movement without a ball.',freq:'20 reps',clubs:'H6, H5'},
+      {name:'Impact bag',desc:'Hit an impact bag feeling a square face at contact. Hold impact position for 3 seconds.',freq:'15 shots',clubs:'All'},
+    ],
+  },
+  // CLOSED FACE
+  cara_cerrada:{
+    es:[
+      {name:'Grip más débil',desc:'Gira el grip hacia la derecha. La V de la mano derecha apunta entre la barbilla y el hombro derecho.',freq:'Cada sesión',clubs:'Todos'},
+      {name:'Delay de muñecas',desc:'Las muñecas no rotan hasta después del impacto. El dorso de la mano izquierda mira al objetivo en el impacto.',freq:'15 bolas',clubs:'Todos'},
+      {name:'Pause at top',desc:'Haz una pausa de 1 segundo en el top del backswing. Esto evita que el palo "quede atrapado" y la cara se cierre por exceso de velocidad de muñecas.',freq:'15 bolas',clubs:'Todos'},
+      {name:'Lead wrist flat',desc:'Frente al espejo, comprueba que la muñeca izquierda esté plana (no arqueada) en el top. Una muñeca arqueada cierra la cara.',freq:'5 min en casa',clubs:'Todos'},
+    ],
+    en:[
+      {name:'Weaker grip',desc:'Rotate your grip to the right (weaker). The right hand V should point between your chin and right shoulder.',freq:'Every session',clubs:'All'},
+      {name:'Wrist delay',desc:'Feel the wrists not rotating until after impact. The back of the left hand should face the target at contact.',freq:'15 balls',clubs:'All'},
+      {name:'Pause at top',desc:'Pause 1 second at the top of backswing. This prevents the club getting "stuck" and the face closing from excessive wrist speed.',freq:'15 balls',clubs:'All'},
+      {name:'Lead wrist flat',desc:'In front of a mirror, check that the left wrist is flat (not bowed) at the top. A bowed wrist closes the face.',freq:'5 min at home',clubs:'All'},
+    ],
+  },
+  // LATERAL DISPERSION
+  dispersion_lateral:{
+    es:[
+      {name:'Impact tape',desc:'Pega impact tape en la cara. Analiza dónde impacta la bola: toe → demasiado lejos, heel → demasiado cerca.',freq:'2 sesiones seguidas',clubs:'H7, H6'},
+      {name:'Medio swing controlado',desc:'Golpea al 60-70% de velocidad hasta que el 80% de bolas caigan ±10m del objetivo.',freq:'20 bolas/sesión',clubs:'Todos'},
+      {name:'Target específico',desc:'Nunca golpees sin un target concreto. Rutina: visualiza, practice swing, address, golpe.',freq:'Cada golpe',clubs:'Todos'},
+      {name:'Arco de 10m',desc:'Imagina un arco de 10m de ancho a 150m. Cada bola que entre suma un punto. Lleva marcador.',freq:'30 bolas',clubs:'H8, H7'},
+    ],
+    en:[
+      {name:'Impact tape',desc:'Apply impact tape to the face. Analyze where the ball hits: toe → standing too far, heel → too close.',freq:'2 sessions in a row',clubs:'H7, H6'},
+      {name:'Controlled half-speed',desc:'Hit at 60-70% speed until 80% of balls land within ±10m of target.',freq:'20 balls/session',clubs:'All'},
+      {name:'Specific target',desc:'Never hit without a concrete target. Routine: visualize, practice swing, address, shot.',freq:'Every shot',clubs:'All'},
+      {name:'10m gate',desc:'Imagine a 10m-wide gate at 150m. Count how many balls go through per session.',freq:'30 balls',clubs:'H8, H7'},
+    ],
+  },
+  // STEEP ATTACK ANGLE (too negative — too steep into the ball)
+  angulo_muy_descendente:{
+    es:[
+      {name:'Divot después de la bola',desc:'Marca el suelo con un tee partido. El divot debe empezar DESPUÉS del tee. Si empieza antes, estás golpeando demasiado empinado.',freq:'15 bolas',clubs:'Todos los hierros'},
+      {name:'Bola más atrás en el stance',desc:'Mueve la bola 3-4cm hacia el pie derecho. Promueve un ángulo más descendente pero controlado.',freq:'Ajuste permanente',clubs:'H5, H6'},
+      {name:'Peso en el lado izquierdo',desc:'60% del peso en el pie izquierdo al address. Evita el "scoop" ascendente.',freq:'Cada golpe',clubs:'Todos'},
+    ],
+    en:[
+      {name:'Divot after the ball',desc:'Mark the ground with a broken tee. The divot must start AFTER the tee. If it starts before, your angle is too steep.',freq:'15 balls',clubs:'All irons'},
+      {name:'Ball back in stance',desc:'Move the ball 3-4cm toward your right foot. This promotes a more controlled descending angle.',freq:'Permanent adjustment',clubs:'H5, H6'},
+      {name:'Weight left',desc:'60% weight on your left foot at address. Prevents the upward "scoop".',freq:'Every shot',clubs:'All'},
+    ],
+  },
+  // SHALLOW / POSITIVE ATTACK ANGLE in irons (too positive — scooping)
+  angulo_muy_ascendente:{
+    es:[
+      {name:'Shaft lean al impacto',desc:'Al impacto, el mango debe estar delante de la cabeza (shaft lean hacia el target). Practica la posición de impacto estático frente al espejo.',freq:'5 min en casa',clubs:'Todos los hierros'},
+      {name:'Bola más adelante NO',desc:'Con hierros, evita poner la bola demasiado adelante en el stance. La posición ideal es centro o ligeramente adelante del centro.',freq:'Check en cada sesión',clubs:'Todos los hierros'},
+      {name:'Pressing the hands',desc:'Antes del backswing, presiona suavemente las manos hacia el target (forward press). Esto promueve un ángulo de ataque más descendente.',freq:'Cada golpe',clubs:'Todos'},
+      {name:'Divot check',desc:'Asegúrate de que siempre hay divot con hierros. Sin divot = estás golpeando la bola al subir el palo.',freq:'Cada sesión',clubs:'Todos los hierros'},
+    ],
+    en:[
+      {name:'Shaft lean at impact',desc:'At impact, the handle should be ahead of the clubhead (shaft leaning toward the target). Practice this static impact position in the mirror.',freq:'5 min at home',clubs:'All irons'},
+      {name:'Ball position check',desc:'With irons, avoid placing the ball too far forward in your stance. Ideal position is center or just forward of center.',freq:'Check every session',clubs:'All irons'},
+      {name:'Forward press',desc:'Before your backswing, gently press the hands toward the target. This promotes a more descending attack angle.',freq:'Every shot',clubs:'All'},
+      {name:'Divot check',desc:'Make sure you always take a divot with irons. No divot = hitting the ball on the upswing.',freq:'Every session',clubs:'All irons'},
+    ],
+  },
+  // IMPACT QUALITY
+  calidad_impacto:{
+    es:[
+      {name:'Rutina de 10 segundos',desc:'1) Target concreto. 2) Practice swing. 3) Address. 4) Waggle. 5) Golpe. Siempre igual. Si algo falla, salir y empezar de cero.',freq:'Cada golpe',clubs:'Todos'},
+      {name:'Series cortas',desc:'Máximo 10 bolas seguidas. Luego 2 minutos de descanso. La calidad cae con la fatiga mental.',freq:'Cada sesión',clubs:'PW'},
+      {name:'Pre-shot visualización',desc:'Visualiza la trayectoria exacta 3 segundos antes del address. Cuanto más específico (altura, curva, aterrizaje), mejor.',freq:'Cada golpe',clubs:'Todos'},
+      {name:'Swing en cámara lenta',desc:'Un swing completo al 20% de velocidad antes de golpear. Siente cada posición. Luego velocidad normal.',freq:'Antes de cada serie',clubs:'Todos'},
+    ],
+    en:[
+      {name:'10-second routine',desc:'1) Specific target. 2) Practice swing. 3) Address. 4) Waggle. 5) Shot. Always the same. If anything breaks, step away and restart.',freq:'Every shot',clubs:'All'},
+      {name:'Short sets',desc:'Maximum 10 balls in a row. Then 2-minute break. Quality drops sharply with mental fatigue.',freq:'Every session',clubs:'PW'},
+      {name:'Pre-shot visualization',desc:'Visualize the exact trajectory for 3 seconds before addressing. The more specific (height, curve, landing), the better.',freq:'Every shot',clubs:'All'},
+      {name:'Slow-motion swing',desc:'One full swing at 20% speed before hitting. Feel every position. Then go full speed.',freq:'Before each set',clubs:'All'},
+    ],
+  },
+  // CONSISTENCY
+  consistencia:{
+    es:[
+      {name:'9 a 3 repetido',desc:'Solo swings de medio recorrido (9h a 3h). Sin pelota primero, luego con. Construye el movimiento desde pequeño hacia grande.',freq:'20 bolas',clubs:'H7, H6, H5'},
+      {name:'Sesión de 3 palos',desc:'Elige 3 palos y trabájalos en profundidad. Calidad sobre cantidad.',freq:'Por sesión',clubs:'Según análisis'},
+      {name:'Distancia marcada',desc:'Coloca conos a tu distancia media de cada palo. El objetivo no es llegar lejos sino llegar al cono.',freq:'20 bolas por palo',clubs:'Todos'},
+    ],
+    en:[
+      {name:'Half-swing drill',desc:'Only 9-to-3 swings. No ball first, then with. Build the movement small before going full.',freq:'20 balls',clubs:'H7, H6, H5'},
+      {name:'3-club session',desc:'Pick 3 clubs and work them in depth. Quality over quantity.',freq:'Per session',clubs:'Per analysis'},
+      {name:'Cone distance',desc:'Place cones at your average distance per club. The goal is hitting the cone, not going as far as possible.',freq:'20 balls/club',clubs:'All'},
+    ],
+  },
+};
 
-// ── Helpers ──
+// ═══════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════
+let SHOTS_CURRENT = typeof SHOTS !== 'undefined' ? SHOTS.slice() : [];
+let ALL_SESSIONS   = [];    // array of {name, date, shots[]}
+let activeClub     = 'Todos';
+let selectedIdx    = null;
+let hiddenSet      = new Set();
+let colorBy        = 'calidad';
+let sortKey        = '';
+let sortDir        = 1;
+let legendFilters  = new Set();
+let tableFilters   = {};
+let canvasHitShots = [];
+let savedFilters   = [];    // [{name, club, tableFilters, legendFilters}]
+let analysisClubFilter = 'Todos';
+let shotsClubFilter = 'Todos';
+let showOnlyLastSession = false;
+
+// ── LANGUAGE ────────────────────────────────────────────────────
+let LANG = localStorage.getItem('golf_lang') || 'es';
+function setLang(l){ LANG=l; localStorage.setItem('golf_lang',l); applyLang(); render(); buildAnalysis(); buildProgress(); }
+function t(es,en){ return LANG==='en'?en:es; }
+
+// i18n for static UI elements
+function applyLang(){
+  // Nav tabs
+  const tabs=[
+    ['screen-map',   '🗺 Campo',    '🗺 Field'],
+    ['screen-stats', '📊 Stats',    '📊 Stats'],
+    ['screen-shots', '📋 Golpes',   '📋 Shots'],
+    ['screen-analysis','🎯 Análisis','🎯 Analysis'],
+    ['screen-progress','📈 Progreso','📈 Progress'],
+    ['screen-data',  '📂 Datos',   '📂 Data'],
+  ];
+  document.querySelectorAll('.nav-tab').forEach((tab,i)=>{
+    if(tabs[i]) tab.textContent = LANG==='en' ? tabs[i][2] : tabs[i][1];
+  });
+  // Lang toggle button
+  const btn = document.getElementById('lang-toggle');
+  if(btn) btn.textContent = LANG==='en' ? '🌐 ES' : '🌐 EN';
+  // Upload area
+  const uploadTitle = document.querySelector('.upload-title');
+  if(uploadTitle) uploadTitle.textContent = t('Cargar Sesión','Load Session');
+  const uploadSub = document.querySelector('.upload-sub');
+  if(uploadSub) uploadSub.innerHTML = t(
+    'Cada sesión se guarda automáticamente en la nube.<br>Acumula el historial para ver tu progreso.',
+    'Each session is automatically saved to the cloud.<br>Build history to track your progress.'
+  );
+  const uploadBtn = document.querySelector('label[for="csvInput-mob"]');
+  if(uploadBtn) uploadBtn.textContent = t('📁 Seleccionar CSV','📁 Select CSV');
+  // Sessions header
+  const sessHeader = document.querySelector('#screen-data .sessions-header');
+  if(sessHeader) sessHeader.textContent = t('Sesiones guardadas','Saved sessions');
+  // Color label
+  const colorLabel = document.querySelector('.color-label');
+  if(colorLabel) colorLabel.textContent = t('Color:','Color:');
+  // Toggle session
+  const togLabel = document.getElementById('toggle-last-label');
+  if(togLabel) togLabel.innerHTML = t('Histórico','History') + ' <input type="checkbox" id="toggle-session" style="width:16px;height:16px;cursor:pointer;"> ' + t('Solo última','Last only');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// PERSISTENCE (Firestore — reemplaza localStorage)
+// ═══════════════════════════════════════════════════════════════
+function saveToStorage(){
+  // Los filtros guardados siguen en localStorage (son preferencias de UI, no datos)
+  try{ localStorage.setItem('golf_saved_filters', JSON.stringify(savedFilters)); }catch(e){}
+  // Las sesiones se guardan en Firestore al añadirlas (ver addSession)
+}
+function loadFromStorage(){
+  // Filtros de UI desde localStorage
+  try{
+    const f=localStorage.getItem('golf_saved_filters');
+    if(f) savedFilters=JSON.parse(f);
+  }catch(e){console.warn('Load filters error',e);}
+  // Las sesiones de Firestore se cargan por onAuthStateChanged → _loadSessionsFromFirestore
+}
+function applySessionData(){
+  if(!ALL_SESSIONS.length) return;
+  if(showOnlyLastSession){
+    SHOTS_CURRENT=ALL_SESSIONS[ALL_SESSIONS.length-1].shots;
+  } else {
+    SHOTS_CURRENT=ALL_SESSIONS.flatMap(s=>s.shots);
+  }
+  assignClubColors(SHOTS_CURRENT);
+}
+function addSession(shots, name){
+  const session={
+    name: name||`Sesión ${ALL_SESSIONS.length+1}`,
+    date: new Date().toLocaleDateString('es-ES'),
+    shots: shots,
+    id: Date.now(),
+  };
+  ALL_SESSIONS.push(session);
+  saveToStorage();
+  applySessionData();
+  assignClubColors(SHOTS_CURRENT);
+  // Subir a Firestore si hay usuario autenticado
+  if(window._saveSessionToFirestore) window._saveSessionToFirestore(session);
+}
+function deleteSession(id){
+  ALL_SESSIONS=ALL_SESSIONS.filter(s=>s.id!==id);
+  saveToStorage();
+  applySessionData();
+  // Eliminar de Firestore si hay usuario autenticado
+  if(window._deleteSessionFromFirestore) window._deleteSessionFromFirestore(id);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
 function avg(a){const v=a.filter(x=>x!=null&&!isNaN(x));return v.length?v.reduce((a,b)=>a+b)/v.length:null;}
 function fmt(v,d=1){return v==null||isNaN(v)?'—':(+v).toFixed(d);}
 function fmtSign(v,d=1){if(v==null||isNaN(v))return'—';return(v>0?'+':'')+v.toFixed(d);}
+function stdDev(arr){
+  const v=arr.filter(x=>x!=null&&!isNaN(x));
+  if(v.length<2)return 0;
+  const m=avg(v);
+  return Math.sqrt(v.reduce((a,x)=>(a+(x-m)**2),0)/v.length);
+}
 
-// ── CSV Parser ──
+// ═══════════════════════════════════════════════════════════════
+// CSV PARSER
+// ═══════════════════════════════════════════════════════════════
 function parseCSV(text){
-  const COL={'Tipo de palo':'palo','Fecha':'fecha','Vel. palo':'vel_palo','Ángulo de ataque':'angulo_ataque','Línea cabeza del palo':'linea_cabeza','Cara del palo':'cara_palo','Cara a línea':'cara_a_linea','Velocidad de la pelota':'vel_bola','Calidad del impacto':'calidad','Ángulo de lanzamiento':'angulo_lanzamiento','Dirección de lanzamiento':'dir_lanzamiento','Retroceso':'retroceso','Efecto lateral':'efecto_lat','Velocidad de rotación':'vel_rotacion','Eje de rotación':'eje_rotacion','Altura máxima':'altura_max','Dist.vuelo':'dist_vuelo','Distancia de desviación de vuelo':'desv_vuelo','Distancia total':'dist_total','Distancia de desviación total':'desv_total','Ángulo de desviación total':'ang_desv_total'};
+  const COL={'Tipo de palo':'palo','Fecha':'fecha','Vel. palo':'vel_palo','Ángulo de ataque':'angulo_ataque','Línea cabeza del palo':'linea_cabeza','Cara del palo':'cara_palo','Cara a línea':'cara_a_linea','Velocidad de la pelota':'vel_bola','Calidad del impacto':'calidad','Ángulo de lanzamiento':'angulo_lanzamiento','Dirección de lanzamiento':'dir_lanzamiento','Retroceso':'retroceso','Efecto lateral':'efecto_lat','Velocidad de rotación':'vel_rotacion','Eje de rotación':'eje_rotacion','Altura máxima':'altura_max','Dist.\u200bvuelo':'dist_vuelo','Distancia de desviación de vuelo':'desv_vuelo','Distancia total':'dist_total','Distancia de desviación total':'desv_total','Ángulo de desviación total':'ang_desv_total'};
   const lines=text.split(/\r?\n/);
   const headers=lines[0].split(',').map(h=>h.trim().replace(/^\uFEFF/,'').replace(/\u200b/g,''));
   const parsed=[];
@@ -480,71 +995,49 @@ function parseCSV(text){
   return parsed;
 }
 
-// ── Data ──
+// ═══════════════════════════════════════════════════════════════
+// DATA HELPERS
+// ═══════════════════════════════════════════════════════════════
 function isInLegendFilter(s){
   if(legendFilters.size===0)return true;
   const cfg=COLOR_CONFIG[colorBy];if(!cfg)return true;
-  // Use dynamic buckets if available, else static
   const buckets=cfg.dynamicBuckets?(cfg._dynBuckets||[]):cfg.buckets;
   if(!buckets||!buckets.length)return true;
   const v=s[colorBy];
   for(const bk of legendFilters){const b=buckets.find(x=>x.k===bk);if(b&&b.test(v))return true;}
   return false;
 }
-function passesTableFilters(s){for(const[k,{min,max}]of Object.entries(tableFilters)){const v=s[k];if(v==null)continue;if(min!==''&&min!=null&&!isNaN(+min)&&v<+min)return false;if(max!==''&&max!=null&&!isNaN(+max)&&v>+max)return false;}return true;}
-function getVisibleShots(){return SHOTS_CURRENT.filter((s,i)=>!hiddenSet.has(i)&&s.dist_total>0.5&&(activeClub==='Todos'||s.palo===activeClub)&&isInLegendFilter(s)&&passesTableFilters(s));}
-function getAllFiltered(){return SHOTS_CURRENT.map((s,i)=>({...s,_origIdx:i})).filter(s=>s.dist_total>0.5&&(activeClub==='Todos'||s.palo===activeClub));}
+function passesTableFilters(s){
+  for(const[k,{min,max}]of Object.entries(tableFilters)){
+    const v=s[k];if(v==null)continue;
+    if(min!==''&&min!=null&&!isNaN(+min)&&v<+min)return false;
+    if(max!==''&&max!=null&&!isNaN(+max)&&v>+max)return false;
+  }
+  return true;
+}
+function getVisibleShots(){
+  return SHOTS_CURRENT.filter((s,i)=>
+    !hiddenSet.has(i)&&s.dist_total>0.5&&
+    (activeClub==='Todos'||s.palo===activeClub)&&
+    isInLegendFilter(s)&&passesTableFilters(s));
+}
+function getAllFiltered(){
+  return SHOTS_CURRENT.map((s,i)=>({...s,_origIdx:i}))
+    .filter(s=>s.dist_total>0.5&&(activeClub==='Todos'||s.palo===activeClub));
+}
 function getShotColor(s,all){
   const cfg=COLOR_CONFIG[colorBy]||COLOR_CONFIG.calidad;
   const v=s[colorBy];if(v==null)return'#556b5a';
   if(cfg.buckets&&!cfg.dynamicBuckets)return cfg.fn(v);
-  // Use stable mn/mx stored by buildLegendMob so colors don't shift when filter active
-  if(cfg.dynamicBuckets&&cfg._dynMn!=null) return cfg.fn(v,cfg._dynMn,cfg._dynMx);
+  if(cfg.dynamicBuckets&&cfg._dynMn!=null)return cfg.fn(v,cfg._dynMn,cfg._dynMx);
   const vals=all.map(x=>x[colorBy]).filter(x=>x!=null);
   if(!vals.length)return'#556b5a';
   return cfg.fn(v,Math.min(...vals),Math.max(...vals));
 }
 
-// ── Screens ──
-function showScreen(id,tab){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
-  const screen=document.getElementById(id);
-  if(screen) screen.classList.add('active');
-  if(tab) tab.classList.add('active');
-  if(id==='screen-map') setTimeout(()=>drawMapMob(),30);
-  if(id==='screen-stats') buildStatsMob();
-  if(id==='screen-shots') buildShotList();
-  if(id==='screen-analysis') buildAnalysis();
-}
-function resetAll(){hiddenSet=new Set();selectedIdx=null;legendFilters=new Set();tableFilters={};sortKey='';sortDir=1;activeClub='Todos';render();}
-
-// ── CSV Loader ──
-function initCSVLoader(){
-  const input=document.getElementById('csvInput-mob');if(!input)return;
-  input.onchange=function(e){
-    const file=e.target.files[0];if(!file)return;
-    const reader=new FileReader();
-    reader.onload=function(ev){
-      const parsed=parseCSV(ev.target.result);
-      const statusEl=document.getElementById('upload-status-mob');
-      if(parsed.length>0){
-        SHOTS_CURRENT=parsed;hiddenSet=new Set();selectedIdx=null;legendFilters=new Set();tableFilters={};
-        if(statusEl)statusEl.textContent=`✅ ${file.name} · ${parsed.length} golpes`;
-        const clubs=[...new Set(parsed.map(s=>s.palo))];
-        const si=document.getElementById('session-info');
-        if(si)si.innerHTML=`📅 ${file.name}<br>🎯 Golpes: ${parsed.length}<br>⛳ Palos: ${clubs.join(', ')}`;
-        render();
-      }else{
-        if(statusEl)statusEl.textContent='⚠ Sin datos válidos en el CSV.';
-      }
-    };
-    reader.onerror=function(){const s=document.getElementById('upload-status-mob');if(s)s.textContent='⚠ Error al leer el fichero.';};
-    reader.readAsText(file,'utf-8');
-  };
-}
-
-// ── Strip ──
+// ═══════════════════════════════════════════════════════════════
+// STRIP
+// ═══════════════════════════════════════════════════════════════
 function buildStripMob(){
   const vis=getVisibleShots();
   document.getElementById('strip-mob').innerHTML=[
@@ -555,64 +1048,83 @@ function buildStripMob(){
   ].map(x=>`<div class="si"><div class="sv">${x.v}</div><div class="sl">${x.l}</div></div>`).join('');
 }
 
-// ── Tabs ──
+// ═══════════════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════════════
 function buildTabsMob(id){
   const c=document.getElementById(id);if(!c)return;c.innerHTML='';
-  const make=(l,v,col)=>{const b=document.createElement('button');b.className='club-btn'+(activeClub===v?' active':'');b.textContent=l;if(activeClub===v){b.style.background=col||'var(--gl)';b.style.color='#0d1b0f';}b.onclick=()=>{activeClub=v;selectedIdx=null;render();};c.appendChild(b);};
+  const make=(l,v,col)=>{
+    const b=document.createElement('button');
+    b.className='club-btn'+(activeClub===v?' active':'');
+    b.textContent=l;
+    if(activeClub===v){b.style.background=col||'var(--gl)';b.style.color='#0d1b0f';}
+    b.onclick=()=>{activeClub=v;selectedIdx=null;render();};
+    c.appendChild(b);
+  };
   make('Todos','Todos',null);
   CLUBS.forEach(n=>make(CLUB_ABBR[n],n,CLUB_COLORS[n]));
 }
 
-// ── Legend ──
+// Shots tab club filter (independent from main activeClub)
+function buildShotsClubFilter(){
+  const c=document.getElementById('shots-club-filter');if(!c)return;c.innerHTML='';
+  const make=(l,v,col)=>{
+    const b=document.createElement('button');
+    b.className='club-btn'+(shotsClubFilter===v?' active':'');
+    b.textContent=l;
+    if(shotsClubFilter===v){b.style.background=col||'var(--gl)';b.style.color='#0d1b0f';}
+    b.onclick=()=>{shotsClubFilter=v;buildShotList();};
+    c.appendChild(b);
+  };
+  make('Todos','Todos',null);
+  CLUBS.forEach(n=>make(CLUB_ABBR[n],n,CLUB_COLORS[n]));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// LEGEND
+// ═══════════════════════════════════════════════════════════════
 function buildLegendMob(){
   const el=document.getElementById('legend-mob');if(!el)return;
   const cfg=COLOR_CONFIG[colorBy];
   if(!cfg){el.innerHTML='';return;}
-
+  function attachClicks(){
+    el.querySelectorAll('.leg-item').forEach(item=>{
+      item.onclick=()=>{const bk=item.dataset.bk;legendFilters.has(bk)?legendFilters.delete(bk):legendFilters.add(bk);render();};
+    });
+  }
+  if(cfg.buckets&&!cfg.dynamicBuckets){
+    el.innerHTML=cfg.buckets.map(b=>`<div class="leg-item${legendFilters.has(b.k)?' active-filter':''}" data-bk="${b.k}"><span class="leg-dot" style="background:${b.c}"></span>${b.l}</div>`).join('');
+    attachClicks();return;
+  }
   if(cfg.dynamicBuckets){
-    // Compute stable quartiles from BASE shots (no legend filter) so ranges don't shift on click
-    const baseShots=SHOTS_CURRENT.filter((s,i)=>
-      !hiddenSet.has(i)&&s.dist_total>0.5&&
-      (activeClub==='Todos'||s.palo===activeClub)&&
-      passesTableFilters(s)
-    );
-    const vals=baseShots.map(s=>s[colorBy]).filter(v=>v!=null).sort((a,b)=>a-b);
+    const base=SHOTS_CURRENT.filter((s,i)=>!hiddenSet.has(i)&&s.dist_total>0.5&&(activeClub==='Todos'||s.palo===activeClub)&&passesTableFilters(s));
+    const vals=base.map(s=>s[colorBy]).filter(v=>v!=null).sort((a,b)=>a-b);
     if(!vals.length){el.innerHTML='';return;}
-    const mn=vals[0], mx=vals[vals.length-1];
+    const mn=vals[0],mx=vals[vals.length-1];
     const q1=vals[Math.floor(vals.length*0.25)];
     const q2=vals[Math.floor(vals.length*0.5)];
     const q3=vals[Math.floor(vals.length*0.75)];
     const unit=cfg.unit||'';
-    const fmt1=v=>Math.abs(v)<10?v.toFixed(1):Math.round(v);
+    const fv=v=>Math.abs(v)<10?v.toFixed(1):Math.round(v);
     const dynBuckets=[
-      {k:'dyn-q1',c:cfg.fn(mn+(mx-mn)*0.1,mn,mx), l:`<${fmt1(q1)}${unit}`,                 test:v=>v<q1},
-      {k:'dyn-q2',c:cfg.fn(mn+(mx-mn)*0.35,mn,mx),l:`${fmt1(q1)}–${fmt1(q2)}${unit}`,      test:v=>v>=q1&&v<q2},
-      {k:'dyn-q3',c:cfg.fn(mn+(mx-mn)*0.65,mn,mx),l:`${fmt1(q2)}–${fmt1(q3)}${unit}`,      test:v=>v>=q2&&v<q3},
-      {k:'dyn-q4',c:cfg.fn(mn+(mx-mn)*0.9,mn,mx), l:`≥${fmt1(q3)}${unit}`,                 test:v=>v>=q3},
+      {k:'dyn-q1',c:cfg.fn(mn+(mx-mn)*0.1,mn,mx),l:`<${fv(q1)}${unit}`,test:v=>v<q1},
+      {k:'dyn-q2',c:cfg.fn(mn+(mx-mn)*0.35,mn,mx),l:`${fv(q1)}–${fv(q2)}${unit}`,test:v=>v>=q1&&v<q2},
+      {k:'dyn-q3',c:cfg.fn(mn+(mx-mn)*0.65,mn,mx),l:`${fv(q2)}–${fv(q3)}${unit}`,test:v=>v>=q2&&v<q3},
+      {k:'dyn-q4',c:cfg.fn(mn+(mx-mn)*0.9,mn,mx),l:`≥${fv(q3)}${unit}`,test:v=>v>=q3},
     ];
-    cfg._dynBuckets=dynBuckets;
-    cfg._dynMn=mn; cfg._dynMx=mx;
-    el.innerHTML=dynBuckets.map(b=>
-      `<div class="leg-item${legendFilters.has(b.k)?' active-filter':''}" data-bk="${b.k}">
-        <span class="leg-dot" style="background:${b.c}"></span>${b.l}</div>`
-    ).join('');
-    el.querySelectorAll('.leg-item').forEach(item=>{
-      item.onclick=()=>{const bk=item.dataset.bk;legendFilters.has(bk)?legendFilters.delete(bk):legendFilters.add(bk);render();};
-    });
-    return;
+    cfg._dynBuckets=dynBuckets;cfg._dynMn=mn;cfg._dynMx=mx;
+    el.innerHTML=dynBuckets.map(b=>`<div class="leg-item${legendFilters.has(b.k)?' active-filter':''}" data-bk="${b.k}"><span class="leg-dot" style="background:${b.c}"></span>${b.l}</div>`).join('');
+    attachClicks();
   }
-
-  if(!cfg.buckets){el.innerHTML='';return;}
-  el.innerHTML=cfg.buckets.map(b=>`<div class="leg-item${legendFilters.has(b.k)?' active-filter':''}" data-bk="${b.k}"><span class="leg-dot" style="background:${b.c}"></span>${b.l}</div>`).join('');
-  el.querySelectorAll('.leg-item').forEach(item=>{item.onclick=()=>{const bk=item.dataset.bk;legendFilters.has(bk)?legendFilters.delete(bk):legendFilters.add(bk);render();};});
 }
 
-// ── Map ──
+// ═══════════════════════════════════════════════════════════════
+// MAP
+// ═══════════════════════════════════════════════════════════════
 function drawMapMob(){
   const canvas=document.getElementById('fairway-mob');if(!canvas)return;
   const all=getAllFiltered();const vis=getVisibleShots();
-  // Use a Set of indices for O(1) visibility lookup (avoids object reference comparison bug)
-  const visIdxSet=new Set(vis.map((_,i)=>SHOTS_CURRENT.indexOf(vis[i])));
+  const visIdxSet=new Set(vis.map(s=>SHOTS_CURRENT.indexOf(s)));
   const W=canvas.offsetWidth||window.innerWidth;
   const H=Math.round(W*1.08);
   canvas.width=W;canvas.height=H;
@@ -632,8 +1144,15 @@ function drawMapMob(){
   canvasHitShots=all.map(s=>({...s,_c:s.desv_total!=null?toC(s.desv_total,s.dist_total):null}));
   const bg=ctx.createLinearGradient(0,0,0,H);bg.addColorStop(0,'#0c2a10');bg.addColorStop(1,'#091508');
   ctx.fillStyle=bg;ctx.fillRect(0,0,W,H);
-  [25,50,75,100,125,150,175].forEach(d=>{if(d>maxY)return;const{cy}=toC(0,d);ctx.strokeStyle='rgba(255,255,255,.07)';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad.left,cy);ctx.lineTo(pad.left+mW,cy);ctx.stroke();ctx.fillStyle='rgba(180,210,180,.3)';ctx.font='8px monospace';ctx.textAlign='left';ctx.fillText(d+'m',2,cy+3);});
-  const{cx:cxC}=toC(0,0);ctx.strokeStyle='rgba(255,255,255,.15)';ctx.setLineDash([5,6]);ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(cxC,pad.top);ctx.lineTo(cxC,pad.top+mH);ctx.stroke();ctx.setLineDash([]);
+  [25,50,75,100,125,150,175].forEach(d=>{
+    if(d>maxY)return;const{cy}=toC(0,d);
+    ctx.strokeStyle='rgba(255,255,255,.07)';ctx.lineWidth=1;
+    ctx.beginPath();ctx.moveTo(pad.left,cy);ctx.lineTo(pad.left+mW,cy);ctx.stroke();
+    ctx.fillStyle='rgba(180,210,180,.3)';ctx.font='8px monospace';ctx.textAlign='left';ctx.fillText(d+'m',2,cy+3);
+  });
+  const{cx:cxC}=toC(0,0);
+  ctx.strokeStyle='rgba(255,255,255,.15)';ctx.setLineDash([5,6]);ctx.lineWidth=1;
+  ctx.beginPath();ctx.moveTo(cxC,pad.top);ctx.lineTo(cxC,pad.top+mH);ctx.stroke();ctx.setLineDash([]);
   all.forEach(s=>{
     if(s.desv_total==null)return;
     const{cx,cy}=toC(s.desv_total,s.dist_total);
@@ -643,11 +1162,9 @@ function drawMapMob(){
     if(isHid){ctx.globalAlpha=.15;ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fillStyle='#556b5a';ctx.fill();ctx.globalAlpha=1;return;}
     if(!inVis&&!isSel){ctx.globalAlpha=.1;ctx.beginPath();ctx.arc(cx,cy,4,0,Math.PI*2);ctx.fillStyle=col;ctx.fill();ctx.globalAlpha=1;return;}
     if(isSel){
-      // Glow ring
       ctx.beginPath();ctx.arc(cx,cy,10,0,Math.PI*2);ctx.fillStyle='rgba(233,196,106,.22)';ctx.fill();
       ctx.beginPath();ctx.arc(cx,cy,8,0,Math.PI*2);ctx.strokeStyle='rgba(233,196,106,.9)';ctx.lineWidth=2;ctx.stroke();
-      // Crosshairs
-      ctx.strokeStyle='rgba(233,196,106,.5)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
+      ctx.strokeStyle='rgba(233,196,106,.4)';ctx.lineWidth=1;ctx.setLineDash([4,4]);
       ctx.beginPath();ctx.moveTo(pad.left,cy);ctx.lineTo(cx-10,cy);ctx.stroke();
       ctx.beginPath();ctx.moveTo(cx+10,cy);ctx.lineTo(pad.left+mW,cy);ctx.stroke();
       ctx.beginPath();ctx.moveTo(cx,pad.top);ctx.lineTo(cx,cy-10);ctx.stroke();
@@ -658,20 +1175,34 @@ function drawMapMob(){
     ctx.beginPath();ctx.arc(cx,cy,2.5,0,Math.PI*2);ctx.fillStyle=club;ctx.fill();
   });
   const mX=avg(vis.map(s=>s.desv_total)),mY=avg(vis.map(s=>s.dist_total));
-  if(mX!=null&&mY!=null){const{cx:mx,cy:my}=toC(mX,mY);ctx.beginPath();ctx.arc(mx,my,8,0,Math.PI*2);ctx.fillStyle='rgba(233,196,106,.9)';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();ctx.fillStyle='#0d1b0f';ctx.font='bold 8px monospace';ctx.textAlign='center';ctx.fillText('μ',mx,my+3);}
-  ctx.globalAlpha=1;ctx.fillStyle='rgba(120,160,130,.4)';ctx.font='8px monospace';ctx.textAlign='left';ctx.fillText('◄ IZQ',4,pad.top+12);ctx.textAlign='right';ctx.fillText('DER ►',W-4,pad.top+12);
+  if(mX!=null&&mY!=null){
+    const{cx:mx,cy:my}=toC(mX,mY);
+    ctx.beginPath();ctx.arc(mx,my,8,0,Math.PI*2);ctx.fillStyle='rgba(233,196,106,.9)';ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();
+    ctx.fillStyle='#0d1b0f';ctx.font='bold 8px monospace';ctx.textAlign='center';ctx.fillText('μ',mx,my+3);
+  }
+  ctx.globalAlpha=1;
+  ctx.fillStyle='rgba(120,160,130,.4)';ctx.font='8px monospace';
+  ctx.textAlign='left';ctx.fillText('◄ IZQ',4,pad.top+12);
+  ctx.textAlign='right';ctx.fillText('DER ►',W-4,pad.top+12);
   ctx.fillStyle='#52b788';ctx.font='bold 8px sans-serif';ctx.textAlign='center';ctx.fillText('▲ TEE',toC(0,0).cx,H-4);
 }
 
-// ── Touch / click map ──
+// ── Map touch ──
 function initMapMob(){
   const canvas=document.getElementById('fairway-mob');
   const tt=document.getElementById('tooltip-mob');
   function nearest(mx,my,thr){let best=null,bestD=thr;canvasHitShots.forEach(s=>{if(!s._c||hiddenSet.has(s._origIdx))return;const d=Math.hypot(s._c.cx-mx,s._c.cy-my);if(d<bestD){bestD=d;best=s;}});return best;}
-  function coords(e,canvas){const rect=canvas.getBoundingClientRect();const sx=canvas.width/rect.width,sy=canvas.height/rect.height;const src=(e.touches&&e.touches[0])||(e.changedTouches&&e.changedTouches[0])||e;if(!src)return{mx:0,my:0,ex:0,ey:0};return{mx:(src.clientX-rect.left)*sx,my:(src.clientY-rect.top)*sy,ex:src.clientX-rect.left,ey:src.clientY-rect.top};}
+  function coords(e,canvas){
+    const rect=canvas.getBoundingClientRect();const sx=canvas.width/rect.width,sy=canvas.height/rect.height;
+    const src=(e.touches&&e.touches[0])||(e.changedTouches&&e.changedTouches[0])||e;
+    if(!src)return{mx:0,my:0};
+    return{mx:(src.clientX-rect.left)*sx,my:(src.clientY-rect.top)*sy,cx:src.clientX,cy:src.clientY};
+  }
   function showTT(e,s){
     const rect=canvas.getBoundingClientRect();
-    const src=e.touches?e.touches[0]:e;
+    const src=(e.touches&&e.touches[0])||(e.changedTouches&&e.changedTouches[0])||e;
+    if(!src)return;
     tt.style.left=Math.min(src.clientX-rect.left+10,rect.width-170)+'px';
     tt.style.top=Math.max(src.clientY-rect.top-80,5)+'px';
     tt.style.display='block';
@@ -681,58 +1212,47 @@ function initMapMob(){
       `<div class="tt-row"><span class="tt-key">Lateral</span><span class="tt-val" style="color:${(s.desv_total||0)>0?'#f2994a':'#6fcf97'}">${fmtSign(s.desv_total)}m</span></div>`+
       `<div class="tt-row"><span class="tt-key">Cara</span><span class="tt-val">${fmtSign(s.cara_palo)}°</span></div>`+
       `<div class="tt-row"><span class="tt-key">Calidad</span><span class="tt-val">${fmt(s.calidad,3)}</span></div>`;
-    // Tap elsewhere to close
   }
   canvas.addEventListener('touchstart',e=>{
-    e.preventDefault();
-    tt.style.display='none'; // hide previous tooltip
-    const{mx,my}=coords(e,canvas);
-    const s=nearest(mx,my,28);
-    if(s)showTT(e,s);
+    e.preventDefault();tt.style.display='none';
+    const{mx,my}=coords(e,canvas);const s=nearest(mx,my,28);if(s)showTT(e,s);
   },{passive:false});
   canvas.addEventListener('touchend',e=>{
     e.preventDefault();
-    const{mx,my}=coords(e,canvas);
-    const s=nearest(mx,my,28);
+    const{mx,my}=coords(e,canvas);const s=nearest(mx,my,28);
     if(s){
       selectedIdx=s._origIdx===selectedIdx?null:s._origIdx;
-      // Redraw map to show selection, update strip and tabs
-      buildStripMob();
-      buildLegendMob();
-      drawMapMob();
-      // Update count
+      buildStripMob();buildLegendMob();drawMapMob();
       const cntEl=document.getElementById('shot-count-mob');
       if(cntEl)cntEl.textContent=`${getVisibleShots().length} visibles`;
-      // If stats screen is active, update it
       const activeScreen=document.querySelector('.screen.active');
-      if(activeScreen&&activeScreen.id==='screen-stats') buildStatsMob();
-      if(activeScreen&&activeScreen.id==='screen-shots') buildShotList();
+      if(activeScreen&&activeScreen.id==='screen-stats')buildStatsMob();
+      if(activeScreen&&activeScreen.id==='screen-shots')buildShotList();
     }
   },{passive:false});
-  canvas.addEventListener('click',e=>{const{mx,my}=coords(e,canvas);const s=nearest(mx,my,18);if(s){selectedIdx=s._origIdx===selectedIdx?null:s._origIdx;render();}});
+  canvas.addEventListener('click',e=>{
+    const{mx,my}=coords(e,canvas);const s=nearest(mx,my,18);
+    if(s){selectedIdx=s._origIdx===selectedIdx?null:s._origIdx;render();}
+  });
 }
 
 function selectShotMob(idx){
-  selectedIdx=idx;
-  render();
-  if(idx!==null){
-    const statsTab=document.querySelector('[data-screen="screen-stats"]');
-    showScreen('screen-stats', statsTab);
-  }
+  selectedIdx=idx;render();
+  if(idx!==null)showScreen('screen-stats',document.querySelector('[data-screen="screen-stats"]'));
 }
 
-// ── Stats ──
+// ═══════════════════════════════════════════════════════════════
+// STATS
+// ═══════════════════════════════════════════════════════════════
 function buildStatsMob(){
-  // vis = shots filtered by activeClub + legend + table filters
   const vis=getVisibleShots();
   const grid=document.getElementById('stats-main-grid');if(!grid)return;
   grid.innerHTML='';
   if(selectedIdx!==null&&SHOTS_CURRENT[selectedIdx]){
     const s=SHOTS_CURRENT[selectedIdx];
-    // Stats for selected shot, compare vs its club average from vis
     const clubShots=vis.filter(x=>x.palo===s.palo);
     ALL_PARAMS.forEach(({k,l,u,d,signed})=>{
-      const v=s[k]; if(v==null)return;
+      const v=s[k];if(v==null)return;
       const clubAvg=avg(clubShots.map(x=>x[k]));
       const diff=clubAvg!=null?v-clubAvg:null;
       const color=signed?(v>0?'#f2994a':'#6fcf97'):'var(--gl)';
@@ -742,9 +1262,8 @@ function buildStatsMob(){
       grid.appendChild(box);
     });
   } else {
-    // Show averages for current club filter
     ALL_PARAMS.forEach(({k,l,u,d,signed})=>{
-      const vals=vis.map(s=>s[k]).filter(v=>v!=null&&!isNaN(v)); if(!vals.length)return;
+      const vals=vis.map(s=>s[k]).filter(v=>v!=null&&!isNaN(v));if(!vals.length)return;
       const mean=avg(vals);
       const color=signed?(mean>0?'#f2994a':'#6fcf97'):'var(--gl)';
       const box=document.createElement('div');box.className='stat-box';
@@ -762,37 +1281,40 @@ function buildStatsMob(){
     if(lbl)lbl.textContent=`Lateral · μ ${fmtSign(avg(desvs))}m · ${desvs.filter(v=>v>0).length} der / ${desvs.filter(v=>v<0).length} izq`;
     vis.forEach(s=>{
       if(s.desv_total==null)return;
-      const origIdx=SHOTS_CURRENT.indexOf(s);
-      const pct=50+(s.desv_total/maxAbs)*46;
+      const origIdx=SHOTS_CURRENT.indexOf(s);const pct=50+(s.desv_total/maxAbs)*46;
       const isSel=selectedIdx===origIdx;
       const dot=document.createElement('div');dot.className='ldot';
       dot.style.cssText=`position:absolute;left:${pct}%;top:50%;transform:translate(-50%,-50%);width:${isSel?10:5}px;height:${isSel?10:5}px;border-radius:50%;background:${isSel?'var(--gold)':s.desv_total>0?'#f2994a':'#6fcf97'};opacity:${isSel?1:.65};z-index:${isSel?5:1};cursor:pointer;`;
       dot.onclick=()=>selectShotMob(origIdx===selectedIdx?null:origIdx);
       lf.appendChild(dot);
     });
-    const mt=document.createElement('div');mt.className='ldot';mt.style.cssText=`position:absolute;left:${50+(avg(desvs)/maxAbs)*46}%;top:0;width:2px;height:100%;background:var(--gold);pointer-events:none;`;
+    const mt=document.createElement('div');mt.className='ldot';
+    mt.style.cssText=`position:absolute;left:${50+(avg(desvs)/maxAbs)*46}%;top:0;width:2px;height:100%;background:var(--gold);pointer-events:none;`;
     lf.appendChild(mt);
   }
-  // Selected detail
   const det=document.getElementById('detail-selected');
   if(det&&selectedIdx!==null&&SHOTS_CURRENT[selectedIdx]){
     const s=SHOTS_CURRENT[selectedIdx];
     det.innerHTML=`<div class="detail-panel"><div class="detail-title">${s.palo} · ${(s.fecha||'').split(' ')[1]||''}</div><div class="detail-grid">${
       ALL_PARAMS.map(({k,l,u,d,signed})=>{const v=s[k];if(v==null)return'';const c=signed?(v>0?'#f2994a':'#6fcf97'):'var(--gl)';return`<div class="dg-item"><span class="dg-key">${l}</span><span style="color:${c}">${signed?fmtSign(v,d):fmt(v,d)}${u}</span></div>`;}).join('')
     }</div></div>`;
-  }else if(det){det.innerHTML='';}
+  }else if(det)det.innerHTML='';
 }
 
-// ── Shot list ──
+// ═══════════════════════════════════════════════════════════════
+// SHOT LIST (with independent club filter)
+// ═══════════════════════════════════════════════════════════════
 function buildShotList(){
-  const all=getAllFiltered();
-  let rows=all.slice();
+  buildShotsClubFilter();
+  const allFiltered=SHOTS_CURRENT.map((s,i)=>({...s,_origIdx:i}))
+    .filter(s=>s.dist_total>0.5&&(shotsClubFilter==='Todos'||s.palo===shotsClubFilter));
+  let rows=allFiltered.slice();
   if(sortKey)rows.sort((a,b)=>{const va=a[sortKey]??-Infinity,vb=b[sortKey]??-Infinity;return sortDir*(va>vb?1:va<vb?-1:0);});
   const list=document.getElementById('shot-list');if(!list)return;
   list.innerHTML='';
   const cntEl=document.getElementById('shot-count-mob');
-  if(cntEl)cntEl.textContent=`${getVisibleShots().length} visibles`;
-  rows.forEach((s,i)=>{
+  if(cntEl)cntEl.textContent=`${rows.filter(s=>!hiddenSet.has(s._origIdx)).length} visibles`;
+  rows.forEach((s)=>{
     const origIdx=s._origIdx;
     const isHid=hiddenSet.has(origIdx),isSel=selectedIdx===origIdx;
     const dc=CLUB_COLORS[s.palo]||'var(--gl)';
@@ -808,250 +1330,527 @@ function buildShotList(){
         <span class="si-tag">cal <span style="color:${(s.calidad||0)>=1.2?'#3cba54':(s.calidad||0)>=1.0?'#f2994a':'#e63946'}">${fmt(s.calidad,3)}</span></span>
       </div>
       <button class="si-hide" data-idx="${origIdx}">${isHid?'🚫':'👁'}</button>`;
-    div.querySelector('.si-hide').onclick=e=>{e.stopPropagation();const idx=+e.currentTarget.dataset.idx;hiddenSet.has(idx)?hiddenSet.delete(idx):hiddenSet.add(idx);if(selectedIdx===idx)selectedIdx=null;render();};
-    div.addEventListener('click',e=>{if(e.target.classList.contains('si-hide'))return;selectShotMob(origIdx===selectedIdx?null:origIdx);});
+    div.querySelector('.si-hide').onclick=e=>{
+      e.stopPropagation();const idx=+e.currentTarget.dataset.idx;
+      hiddenSet.has(idx)?hiddenSet.delete(idx):hiddenSet.add(idx);
+      if(selectedIdx===idx)selectedIdx=null;render();
+    };
+    div.addEventListener('click',e=>{
+      if(e.target.classList.contains('si-hide'))return;
+      selectShotMob(origIdx===selectedIdx?null:origIdx);
+    });
     list.appendChild(div);
   });
 }
 
-// ── Filter sheet ──
+// ═══════════════════════════════════════════════════════════════
+// SAVED FILTERS
+// ═══════════════════════════════════════════════════════════════
+function saveCurrentFilter(){
+  const name=prompt('Nombre del filtro (ej: "Punch con H7"):');
+  if(!name||!name.trim())return;
+  savedFilters.push({
+    id:Date.now(),name:name.trim(),
+    club:activeClub,
+    tableFilters:JSON.parse(JSON.stringify(tableFilters)),
+    legendFilters:[...legendFilters],
+  });
+  saveToStorage();
+  buildFilterSheet();
+  alert(`✅ Filtro "${name.trim()}" guardado`);
+}
+function applyFilter(f){
+  activeClub=f.club;
+  tableFilters=JSON.parse(JSON.stringify(f.tableFilters));
+  legendFilters=new Set(f.legendFilters);
+  closeFilterSheet();render();
+}
+function deleteFilter(id){
+  savedFilters=savedFilters.filter(f=>f.id!==id);
+  saveToStorage();buildFilterSheet();
+}
+
+function buildFilterSheet(){
+  const fp=document.getElementById('filter-content-mob');if(!fp)return;
+  const params=[
+    {k:'dist_total',l:'Dist. total (m)'},{k:'desv_total',l:'Lateral (m)'},
+    {k:'vel_bola',l:'Vel. bola (m/s)'},{k:'cara_palo',l:'Cara palo (°)'},
+    {k:'calidad',l:'Calidad'},{k:'altura_max',l:'Alt. máx (m)'},
+    {k:'retroceso',l:'Backspin (rpm)'},{k:'angulo_ataque',l:'Ataque (°)'},
+  ];
+  let html=`<div style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem;">Rangos de parámetros</div>`;
+  html+=params.map(({k,l})=>{const cur=tableFilters[k]||{};return(
+    `<div class="filter-row-m"><span class="filter-lbl-m">${l}</span>`+
+    `<input class="filter-input-m" type="number" placeholder="min" data-k="${k}" data-t="min" value="${cur.min??''}">`+
+    `<span style="color:var(--muted);font-family:'DM Mono',monospace;font-size:.6rem;">–</span>`+
+    `<input class="filter-input-m" type="number" placeholder="max" data-k="${k}" data-t="max" value="${cur.max??''}"></div>`
+  );}).join('');
+  // Saved filters
+  if(savedFilters.length){
+    html+=`<div style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:1rem 0 .5rem;">Filtros guardados</div>`;
+    html+=savedFilters.map(f=>`
+      <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;background:rgba(82,183,136,.08);border:1px solid rgba(82,183,136,.2);border-radius:4px;padding:.4rem .6rem;">
+        <span style="flex:1;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--text);">${f.name}</span>
+        <span style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);">${CLUB_ABBR[f.club]||f.club}</span>
+        <button onclick="applyFilter(${JSON.stringify(f).replace(/"/g,'&quot;')})" style="font-family:'DM Mono',monospace;font-size:.6rem;padding:.2rem .5rem;background:var(--gl);color:#0d1b0f;border:none;border-radius:3px;cursor:pointer;">Usar</button>
+        <button onclick="deleteFilter(${f.id})" style="font-family:'DM Mono',monospace;font-size:.6rem;padding:.2rem .4rem;background:rgba(230,57,70,.2);color:var(--red);border:none;border-radius:3px;cursor:pointer;">✕</button>
+      </div>`).join('');
+  }
+  fp.innerHTML=html;
+  fp.querySelectorAll('.filter-input-m').forEach(inp=>{
+    inp.oninput=()=>{
+      const k=inp.dataset.k,t=inp.dataset.t,v=inp.value;
+      if(!tableFilters[k])tableFilters[k]={};
+      tableFilters[k][t]=v;
+      if(!tableFilters[k].min&&!tableFilters[k].max)delete tableFilters[k];
+    };
+  });
+}
 function openFilterSheet(){
   document.getElementById('filter-sheet').classList.add('open');
   document.getElementById('filter-overlay').classList.add('open');
-  const fp=document.getElementById('filter-content-mob');if(!fp)return;
-  const params=[{k:'dist_total',l:'Dist. total (m)'},{k:'desv_total',l:'Lateral (m)'},{k:'vel_bola',l:'Vel. bola (m/s)'},{k:'cara_palo',l:'Cara palo (°)'},{k:'calidad',l:'Calidad'},{k:'altura_max',l:'Alt. máx (m)'},{k:'retroceso',l:'Backspin (rpm)'}];
-  fp.innerHTML=params.map(({k,l})=>{const cur=tableFilters[k]||{};return`<div class="filter-row-m"><span class="filter-lbl-m">${l}</span><input class="filter-input-m" type="number" placeholder="min" data-k="${k}" data-t="min" value="${cur.min??''}"><span style="color:var(--muted);font-family:'DM Mono',monospace;font-size:.6rem;">–</span><input class="filter-input-m" type="number" placeholder="max" data-k="${k}" data-t="max" value="${cur.max??''}"></div>`;}).join('');
-  fp.querySelectorAll('.filter-input-m').forEach(inp=>{inp.oninput=()=>{const k=inp.dataset.k,t=inp.dataset.t,v=inp.value;if(!tableFilters[k])tableFilters[k]={};tableFilters[k][t]=v;if(!tableFilters[k].min&&!tableFilters[k].max)delete tableFilters[k];};});
+  buildFilterSheet();
 }
-function closeFilterSheet(){document.getElementById('filter-sheet').classList.remove('open');document.getElementById('filter-overlay').classList.remove('open');}
-
-// ── Render ──
-function render(){
-  buildStripMob();
-  buildTabsMob('tabs-mob');
-  buildTabsMob('tabs-stats');
-  buildLegendMob();
-  drawMapMob();
-  const activeScreen=document.querySelector('.screen.active');
-  const activeId=activeScreen?activeScreen.id:'screen-map';
-  if(activeId==='screen-stats') buildStatsMob();
-  if(activeId==='screen-shots') buildShotList();
-  if(activeId==='screen-analysis') buildAnalysis();
-  const cntEl=document.getElementById('shot-count-mob');
-  if(cntEl) cntEl.textContent=`${getVisibleShots().length} visibles`;
+function closeFilterSheet(){
+  document.getElementById('filter-sheet').classList.remove('open');
+  document.getElementById('filter-overlay').classList.remove('open');
 }
 
-// ── Init ──
-
-// ── Analysis ───────────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════
+// ANALYSIS (expanded drills)
+// ═══════════════════════════════════════════════════════════════
 function buildAnalysis(){
-  const el=document.getElementById('analysis-content');
-  if(!el)return;
+  const el=document.getElementById('analysis-content');if(!el)return;
   const allValid=SHOTS_CURRENT.filter(s=>s.dist_total>0.5);
-  if(!allValid.length){el.innerHTML='<div style="color:var(--muted);font-family:\'DM Mono\',monospace;font-size:.7rem;padding:1rem;">Carga una sesión CSV para ver el análisis.</div>';return;}
-
-  // Global swing stats
-  const glCara=avg(allValid.map(s=>s.cara_palo));
-  const glLinea=avg(allValid.map(s=>s.linea_cabeza));
-  const glAtaque=avg(allValid.map(s=>s.angulo_ataque));
-  const glEfecto=avg(allValid.map(s=>s.efecto_lat));
-  const glCal=avg(allValid.map(s=>s.calidad));
-  const glLat=avg(allValid.map(s=>s.desv_total));
-  const pctDer=allValid.filter(s=>(s.desv_total||0)>5).length/allValid.length*100;
-  const pctIzq=allValid.filter(s=>(s.desv_total||0)<-5).length/allValid.length*100;
-  const pctMalos=allValid.filter(s=>(s.calidad||0)<1.0).length/allValid.length*100;
-  const pctBuenos=allValid.filter(s=>(s.calidad||0)>=1.2).length/allValid.length*100;
-
-  // Build issues list from data
-  const issues=[];
-
-  // Swing path
-  if(glLinea!=null&&glLinea>4){
-    issues.push({
-      prio:'red',tag:'CRÍTICO',
-      title:'Swing Out-to-In',
-      data:`Línea swing: <span>${fmtSign(glLinea,1)}°</span> (ideal ±2°)`,
-      tips:[
-        'Drill de la toalla: pon una toalla a la derecha de la bola y pasa por dentro sin tocarla',
-        'Siente que el palo "cae por dentro" en la bajada antes del impacto',
-        'Grábate desde atrás — el palo debe bajar más plano que en el backswing',
-      ]
-    });
+  if(!allValid.length){
+    el.innerHTML=`<div style="color:var(--muted);font-family:'DM Mono',monospace;font-size:.7rem;padding:1rem;">${t('Carga una sesión CSV para ver el análisis.','Load a CSV session to see the analysis.')}</div>`;
+    return;
   }
 
-  // Face angle global
-  if(glCara!=null&&Math.abs(glCara)>2){
-    const dir=glCara>0?'abierta (fade/slice)':'cerrada (draw/hook)';
-    issues.push({
-      prio:Math.abs(glCara)>4?'red':'orange',
-      tag:Math.abs(glCara)>4?'CRÍTICO':'IMPORTANTE',
-      title:`Cara del palo ${dir}`,
-      data:`Cara media: <span>${fmtSign(glCara,1)}°</span> (ideal ±1°)`,
-      tips:[
-        glCara>0?'Comprueba el grip: la V de la mano derecha debe apuntar al hombro derecho':'Abre ligeramente el grip — la V debe apuntar entre la barbilla y el hombro derecho',
-        glCara>0?'En el backswing: el filo del palo debe apuntar al cielo a las 9h, no hacia fuera':'Siente el antebrazo izquierdo rotando hacia dentro en el downswing',
-        'Usa impact tape para confirmar el ángulo de cara en el contacto',
-      ]
-    });
+  // Filter by analysis club filter
+  let filtered=allValid;
+  const allFilterKey=t('Todos','All');
+  if(analysisClubFilter!==allFilterKey&&analysisClubFilter!=='Todos'&&analysisClubFilter!=='All'){
+    const group=CLUB_GROUPS[analysisClubFilter];
+    if(group) filtered=allValid.filter(s=>group.includes(s.palo));
+    else filtered=allValid.filter(s=>s.palo===analysisClubFilter);
   }
 
-  // Per-club face issues
-  CLUBS.forEach(club=>{
-    const shots=allValid.filter(s=>s.palo===club&&s.cara_palo!=null);
-    if(shots.length<3)return;
-    const cara=avg(shots.map(s=>s.cara_palo));
-    if(Math.abs(cara)>4&&Math.abs(cara)>(Math.abs(glCara||0)+1.5)){
-      issues.push({
-        prio:'orange',tag:'POR PALO',
-        title:`${CLUB_ABBR[club]||club} — cara especialmente ${cara>0?'abierta':'cerrada'}`,
-        data:`Cara ${CLUB_ABBR[club]}: <span>${fmtSign(cara,1)}°</span> vs media global ${fmtSign(glCara,1)}°`,
-        tips:[
-          `Revisa el grip específicamente con el ${club} antes de cada golpe`,
-          'Haz 3 swings lentos sintiendo la cara cuadrada antes de golpear',
-          `${cara>0?'Cierra':'Abre'} conscientemente la cara al address hasta que se sienta cuadrada — para ti eso ES cuadrada`,
-        ]
-      });
+  const glCara  = avg(filtered.map(s=>s.cara_palo));
+  const glLinea = avg(filtered.map(s=>s.linea_cabeza));
+  const glAtaque= avg(filtered.map(s=>s.angulo_ataque));
+  const glCal   = avg(filtered.map(s=>s.calidad));
+  const glLat   = avg(filtered.map(s=>s.desv_total));
+  const pctDer  = filtered.filter(s=>(s.desv_total||0)>5).length/filtered.length*100;
+  const pctIzq  = filtered.filter(s=>(s.desv_total||0)<-5).length/filtered.length*100;
+  const pctMalos  = filtered.filter(s=>(s.calidad||0)<1.0).length/filtered.length*100;
+  const pctBuenos = filtered.filter(s=>(s.calidad||0)>=1.2).length/filtered.length*100;
+
+  // ── getDrills: pulls from the correct language array ──
+  function getDrills(key, count=3){
+    const entry = DRILLS[key];
+    if(!entry) return [];
+    const arr = (entry.es ? entry[LANG] || entry.es : entry) || [];
+    const offset = (ALL_SESSIONS.length||0) % Math.max(arr.length,1);
+    const rotated = [...arr.slice(offset), ...arr.slice(0,offset)];
+    return rotated.slice(0, count);
+  }
+
+  const issues = [];
+
+  // ── CLUB PATH (linea_cabeza) — fully symmetric ──
+  if(glLinea!=null && glLinea>3){
+    // out-to-in: positive → swing goes left of target (fade/slice tendency)
+    const sev = glLinea>6?'red':glLinea>4?'orange':'green';
+    issues.push({prio:sev, tag:glLinea>6?t('CRÍTICO','CRITICAL'):t('IMPORTANTE','IMPORTANT'), clubs:t('Todos','All'),
+      title: t(`Swing Out-to-In (+${glLinea.toFixed(1)}°)`, `Out-to-In Path (+${glLinea.toFixed(1)}°)`),
+      data:  t(`Línea swing: <span>${fmtSign(glLinea,1)}°</span> · ideal ±2°`, `Swing path: <span>${fmtSign(glLinea,1)}°</span> · ideal ±2°`),
+      drills: getDrills('path_out_to_in',4)});
+  } else if(glLinea!=null && glLinea<-3){
+    // in-to-out: negative → swing goes right of target (draw/hook tendency)
+    const sev = glLinea<-6?'red':glLinea<-4?'orange':'green';
+    issues.push({prio:sev, tag:glLinea<-6?t('CRÍTICO','CRITICAL'):t('IMPORTANTE','IMPORTANT'), clubs:t('Todos','All'),
+      title: t(`Swing In-to-Out (${glLinea.toFixed(1)}°)`, `In-to-Out Path (${glLinea.toFixed(1)}°)`),
+      data:  t(`Línea swing: <span>${fmtSign(glLinea,1)}°</span> · ideal ±2° (favorece hook/draw excesivo)`,
+               `Swing path: <span>${fmtSign(glLinea,1)}°</span> · ideal ±2° (promotes excessive hook/draw)`),
+      drills: getDrills('path_in_to_out',4)});
+  }
+
+  // ── FACE ANGLE — symmetric ──
+  if(glCara!=null && glCara>2){
+    issues.push({prio:glCara>5?'red':'orange', tag:glCara>5?t('CRÍTICO','CRITICAL'):t('IMPORTANTE','IMPORTANT'), clubs:t('Todos','All'),
+      title: t(`Cara abierta (+${glCara.toFixed(1)}°)`, `Open face (+${glCara.toFixed(1)}°)`),
+      data:  t(`Cara media: <span>${fmtSign(glCara,1)}°</span> · ideal ±1°`, `Avg face: <span>${fmtSign(glCara,1)}°</span> · ideal ±1°`),
+      drills: getDrills('cara_abierta',4)});
+  } else if(glCara!=null && glCara<-2){
+    issues.push({prio:glCara<-5?'red':'orange', tag:glCara<-5?t('CRÍTICO','CRITICAL'):t('IMPORTANTE','IMPORTANT'), clubs:t('Todos','All'),
+      title: t(`Cara cerrada (${glCara.toFixed(1)}°)`, `Closed face (${glCara.toFixed(1)}°)`),
+      data:  t(`Cara media: <span>${fmtSign(glCara,1)}°</span> · ideal ±1°`, `Avg face: <span>${fmtSign(glCara,1)}°</span> · ideal ±1°`),
+      drills: getDrills('cara_cerrada',4)});
+  }
+
+  // ── LATERAL DISPERSION ──
+  if(pctDer+pctIzq>35){
+    issues.push({prio:'orange', tag:t('DISPERSIÓN','DISPERSION'), clubs:t('Todos','All'),
+      title: t(`Alta dispersión lateral (${Math.round(pctDer+pctIzq)}%)`, `High lateral dispersion (${Math.round(pctDer+pctIzq)}%)`),
+      data:  t(`Derecha: <span>${Math.round(pctDer)}%</span> · Izquierda: <span>${Math.round(pctIzq)}%</span>`,
+               `Right: <span>${Math.round(pctDer)}%</span> · Left: <span>${Math.round(pctIzq)}%</span>`),
+      drills: getDrills('dispersion_lateral',4)});
+  }
+
+  // ── ATTACK ANGLE — symmetric, iron-aware ──
+  // Only meaningful for irons (not driver/woods where positive AoA is expected)
+  const ironShots = filtered.filter(s=>s.angulo_ataque!=null);
+  if(ironShots.length>=3){
+    if(glAtaque!=null && glAtaque<-4){
+      // Too steep (very negative) for irons
+      issues.push({prio:'orange', tag:t('ATAQUE','ATTACK'), clubs:t('Hierros','Irons'),
+        title: t(`Ángulo muy descendente (${glAtaque.toFixed(1)}°)`, `Very steep attack angle (${glAtaque.toFixed(1)}°)`),
+        data:  t(`Ataque medio: <span>${fmtSign(glAtaque,1)}°</span> · ideal −1° a −3°`,
+                 `Avg attack: <span>${fmtSign(glAtaque,1)}°</span> · ideal −1° to −3°`),
+        drills: getDrills('angulo_muy_descendente',3)});
+    } else if(glAtaque!=null && glAtaque>1){
+      // Positive / ascending in irons = scooping
+      issues.push({prio:'orange', tag:t('ATAQUE','ATTACK'), clubs:t('Hierros','Irons'),
+        title: t(`Ángulo ascendente con hierros (+${glAtaque.toFixed(1)}°)`, `Ascending attack with irons (+${glAtaque.toFixed(1)}°)`),
+        data:  t(`Ataque medio: <span>${fmtSign(glAtaque,1)}°</span> · ideal −1° a −3° (posible scoop)`,
+                 `Avg attack: <span>${fmtSign(glAtaque,1)}°</span> · ideal −1° to −3° (possible scoop)`),
+        drills: getDrills('angulo_muy_ascendente',3)});
     }
-  });
-
-  // Lateral dispersion
-  if(pctDer+pctIzq>40){
-    const dirMain=pctDer>pctIzq?'derecha':'izquierda';
-    issues.push({
-      prio:'orange',tag:'IMPORTANTE',
-      title:`Alta dispersión lateral (${Math.round(pctDer+pctIzq)}% fuera ±5m)`,
-      data:`Derecha: <span>${Math.round(pctDer)}%</span> · Izquierda: <span>${Math.round(pctIzq)}%</span> · Media: <span>${fmtSign(glLat,1)}m</span>`,
-      tips:[
-        `Tendencia principal a la ${dirMain} — trabaja ${dirMain==='derecha'?'el cierre de cara y path in-to-out':'el path más a la derecha y cara más abierta'}`,
-        'Impact tape en cada sesión para identificar el contacto en la cara',
-        'Reduce velocidad al 70% hasta estabilizar la dirección',
-      ]
-    });
   }
 
-  // Angle of attack
-  if(glAtaque!=null&&glAtaque<-2){
-    issues.push({
-      prio:'orange',tag:'IMPORTANTE',
-      title:'Ángulo de ataque muy descendente',
-      data:`Ataque medio: <span>${fmtSign(glAtaque,1)}°</span> (ideal hierros −1° a −3°)`,
-      tips:[
-        'Mueve la bola ligeramente más atrás en el stance (hacia el pie derecho)',
-        'Siente que pegas "hacia abajo y a través" — el divot debe ser después de la bola',
-        'No intentes levantar la bola — el loft del palo ya lo hace',
-      ]
-    });
-  }
-
-  // Impact quality
+  // ── IMPACT QUALITY ──
   if(pctMalos>15){
-    issues.push({
-      prio:'orange',tag:'IMPORTANTE',
-      title:`${Math.round(pctMalos)}% de golpes con mala calidad de impacto`,
-      data:`Calidad media: <span>${fmt(glCal,3)}</span> · Malos (<1.0): <span>${Math.round(pctMalos)}%</span> · Excelentes (≥1.2): <span>${Math.round(pctBuenos)}%</span>`,
-      tips:[
-        'Rutina pre-shot consistente — mismo proceso en cada golpe',
-        'Series más cortas (10 bolas máximo) con reset mental entre series',
-        'Marca con spray o impact tape para identificar el punto de contacto en la cara',
-      ]
-    });
+    issues.push({prio:'orange', tag:t('CONTACTO','CONTACT'), clubs:t('Todos','All'),
+      title: t(`${Math.round(pctMalos)}% golpes con mal contacto`, `${Math.round(pctMalos)}% shots with poor contact`),
+      data:  t(`Calidad media: <span>${fmt(glCal,3)}</span> · Buenos: <span>${Math.round(pctBuenos)}%</span>`,
+               `Avg quality: <span>${fmt(glCal,3)}</span> · Good: <span>${Math.round(pctBuenos)}%</span>`),
+      drills: getDrills('calidad_impacto',4)});
   }
 
-  // Per-club consistency
+  // ── PER-CLUB CONSISTENCY ──
   CLUBS.forEach(club=>{
-    const shots=allValid.filter(s=>s.palo===club&&s.dist_total>5);
+    const shots=filtered.filter(s=>s.palo===club&&s.dist_total>5);
     if(shots.length<4)return;
     const dists=shots.map(s=>s.dist_total);
-    const mean=avg(dists);
-    const sd=Math.sqrt(dists.reduce((a,v)=>(a+(v-mean)**2),0)/dists.length);
+    const sd=stdDev(dists);
     const pctLat=shots.filter(s=>Math.abs(s.desv_total||0)>15).length/shots.length*100;
-    if(sd>18||pctLat>40){
-      issues.push({
-        prio:'orange',tag:'CONSISTENCIA',
-        title:`${club} — alta dispersión`,
-        data:`Std distancia: <span>±${sd.toFixed(1)}m</span> · Golpes >15m lateral: <span>${Math.round(pctLat)}%</span>`,
-        tips:[
-          `Reduce velocidad del ${CLUB_ABBR[club]||club} al 80% y prioriza el centro de la cara`,
-          'Impact tape 2 sesiones seguidas para identificar el patrón de contacto',
-          sd>18?'La dispersión de distancia sugiere contactos fuera del sweet spot':'La dispersión lateral sugiere inconsistencia en la cara o el path',
-        ]
-      });
+    if(sd>20||pctLat>45){
+      issues.push({prio:'orange', tag:t('CONSISTENCIA','CONSISTENCY'), clubs:CLUB_ABBR[club]||club,
+        title: t(`${CLUB_ABBR[club]} — dispersión alta`, `${CLUB_ABBR[club]} — high dispersion`),
+        data:  t(`Std dist: <span>±${sd.toFixed(1)}m</span> · >15m lateral: <span>${Math.round(pctLat)}%</span>`,
+                 `Dist std: <span>±${sd.toFixed(1)}m</span> · >15m lateral: <span>${Math.round(pctLat)}%</span>`),
+        drills: getDrills('consistencia',3)});
     }
   });
 
-  // Best clubs
+  // ── BEST / WORST CLUBS ──
   const clubStats=CLUBS.map(club=>{
-    const shots=allValid.filter(s=>s.palo===club&&s.dist_total>5);
+    const shots=filtered.filter(s=>s.palo===club&&s.dist_total>5);
     if(shots.length<3)return null;
-    const cal=avg(shots.map(s=>s.calidad));
-    const dists=shots.map(s=>s.dist_total);
-    const mean=avg(dists);
-    const sd=Math.sqrt(dists.reduce((a,v)=>(a+(v-mean)**2),0)/dists.length);
-    const pctLat=shots.filter(s=>Math.abs(s.desv_total||0)>15).length/shots.length*100;
-    return{club,cal,sd,pctLat,mean,n:shots.length};
+    return{club,cal:avg(shots.map(s=>s.calidad))||0,sd:stdDev(shots.map(s=>s.dist_total)),
+           pctLat:shots.filter(s=>Math.abs(s.desv_total||0)>15).length/shots.length*100};
   }).filter(Boolean);
+  const bestClub=[...clubStats].sort((a,b)=>(b.cal-a.cal)-(b.sd-a.sd)*0.05)[0];
+  const worstClub=[...clubStats].filter(x=>x.club!==(bestClub&&bestClub.club)).sort((a,b)=>(a.cal-b.cal)+(a.pctLat-b.pctLat)*0.05)[0];
 
-  // Sort on separate copies so best/worst don't interfere
-  const bestClub=[...clubStats].sort((a,b)=>((b.cal||0)-(a.cal||0))-(b.sd-a.sd)*0.05)[0];
-  const worstClub=[...clubStats]
-    .filter(x=>x.club!==(bestClub&&bestClub.club))  // exclude best club
-    .sort((a,b)=>((a.cal||0)-(b.cal||0))+(a.pctLat-b.pctLat)*0.05+(a.sd-b.sd)*0.02)[0];
+  // ── Filter bar options (language-aware) ──
+  const filterOpts=[
+    [t('Todos','All'),'Todos'],
+    ['Wedges','Wedges'],
+    [t('Hierros cortos','Short irons'),'Hierros cortos'],
+    [t('Hierros medios','Mid irons'),'Hierros medios'],
+    [t('Hierros largos','Long irons'),'Hierros largos'],
+    [t('Todos los hierros','All irons'),'Todos los hierros'],
+    ...CLUBS.map(c=>[CLUB_ABBR[c]||c, c]),
+  ];
 
-  // Render
-  let html=`<div class="analysis-section">
-    <div class="analysis-title">📊 Resumen de sesión</div>
+  // ── Render ──
+  let html=`
+  <div style="display:flex;gap:.4rem;overflow-x:auto;padding:.2rem 0 .6rem;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-bottom:.2rem;">
+    ${filterOpts.map(([label,val])=>{
+      const active=(analysisClubFilter===val)||(analysisClubFilter==='Todos'&&val==='Todos')||(analysisClubFilter==='All'&&val==='Todos');
+      return`<button onclick="analysisClubFilter='${val}';buildAnalysis();" style="flex-shrink:0;font-family:'DM Mono',monospace;font-size:.58rem;padding:.28rem .65rem;border-radius:3px;border:1px solid ${active?'var(--gl)':'var(--border)'};background:${active?'var(--gl)':'transparent'};color:${active?'#0d1b0f':'var(--muted)'};cursor:pointer;white-space:nowrap;">${label}</button>`;
+    }).join('')}
+  </div>
+
+  <div class="analysis-section">
+    <div class="analysis-title">📊 ${t('Resumen','Summary')} (${filtered.length} ${t('golpes','shots')})</div>
     <div class="summary-grid">
-      <div class="sg-box"><div class="sg-val" style="color:var(--gl)">${allValid.length}</div><div class="sg-lbl">Golpes</div></div>
-      <div class="sg-box"><div class="sg-val" style="color:${glCal>=1.15?'#3cba54':glCal>=1.05?'#f2994a':'#e63946'}">${fmt(glCal,3)}</div><div class="sg-lbl">Calidad μ</div></div>
-      <div class="sg-box"><div class="sg-val" style="color:${Math.abs(glLinea||0)<3?'#3cba54':'#f2994a'}">${fmtSign(glLinea,1)}°</div><div class="sg-lbl">Línea swing μ</div></div>
-      <div class="sg-box"><div class="sg-val" style="color:${Math.abs(glCara||0)<2?'#3cba54':'#f2994a'}">${fmtSign(glCara,1)}°</div><div class="sg-lbl">Cara palo μ</div></div>
-      <div class="sg-box"><div class="sg-val" style="color:var(--gl)">${bestClub?CLUB_ABBR[bestClub.club]:'—'}</div><div class="sg-lbl">Mejor palo</div></div>
-      <div class="sg-box"><div class="sg-val" style="color:var(--red)">${worstClub?CLUB_ABBR[worstClub.club]:'—'}</div><div class="sg-lbl">A mejorar</div></div>
+      <div class="sg-box"><div class="sg-val" style="color:${Math.abs(glLinea||0)<3?'#3cba54':'#f2994a'}">${fmtSign(glLinea,1)}°</div><div class="sg-lbl">${t('Línea swing','Swing path')}</div></div>
+      <div class="sg-box"><div class="sg-val" style="color:${Math.abs(glCara||0)<2?'#3cba54':'#f2994a'}">${fmtSign(glCara,1)}°</div><div class="sg-lbl">${t('Cara palo','Face angle')}</div></div>
+      <div class="sg-box"><div class="sg-val" style="color:${glCal>=1.15?'#3cba54':glCal>=1.05?'#f2994a':'#e63946'}">${fmt(glCal,3)}</div><div class="sg-lbl">${t('Calidad μ','Quality μ')}</div></div>
+      <div class="sg-box"><div class="sg-val" style="color:var(--gl)">${fmtSign(glLat,1)}m</div><div class="sg-lbl">${t('Lateral μ','Lateral μ')}</div></div>
+      <div class="sg-box"><div class="sg-val" style="color:#3cba54">${bestClub?CLUB_ABBR[bestClub.club]:'—'}</div><div class="sg-lbl">${t('Mejor palo','Best club')}</div></div>
+      <div class="sg-box"><div class="sg-val" style="color:var(--red)">${worstClub?CLUB_ABBR[worstClub.club]:'—'}</div><div class="sg-lbl">${t('A mejorar','To improve')}</div></div>
     </div>
   </div>`;
 
   if(issues.length===0){
     html+=`<div class="analysis-card" style="border-color:rgba(82,183,136,.4)">
-      <div class="ac-head"><span style="font-size:1.5rem">✅</span><span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gl)">Sesión muy consistente</span></div>
-      <div class="ac-fix">No se detectan patrones problemáticos significativos. Mantén la rutina y trabaja en aumentar velocidad manteniendo la consistencia.</div>
+      <div class="ac-head"><span style="font-size:1.3rem">✅</span><span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--gl)">${t('Sin problemas detectados','No issues detected')}</span></div>
+      <div class="ac-fix">${t('Sesión muy consistente. Trabaja en aumentar velocidad manteniendo la precisión.','Very consistent session. Work on increasing speed while maintaining precision.')}</div>
     </div>`;
   } else {
-    html+=`<div class="analysis-title">⚠ Puntos a corregir (${issues.length})</div>`;
+    html+=`<div class="analysis-title">⚠ ${t('Correcciones','Corrections')} (${issues.length})</div>`;
     issues.forEach(issue=>{
-      const borderColor=issue.prio==='red'?'rgba(230,57,70,.4)':issue.prio==='orange'?'rgba(242,153,74,.3)':'rgba(82,183,136,.25)';
+      const bc=issue.prio==='red'?'rgba(230,57,70,.4)':issue.prio==='orange'?'rgba(242,153,74,.3)':'rgba(82,183,136,.25)';
       const badgeClass=issue.prio==='red'?'badge-red':issue.prio==='orange'?'badge-orange':'badge-green';
-      html+=`<div class="analysis-card" style="border-color:${borderColor}">
+      const drillsHtml=issue.drills.map(d=>`
+        <div style="margin-bottom:.5rem;padding:.5rem;background:rgba(0,0,0,.2);border-radius:4px;">
+          <div style="font-family:'Bebas Neue',sans-serif;font-size:.9rem;color:var(--gl);margin-bottom:.2rem;">${d.name}</div>
+          <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);margin-bottom:.25rem;">${d.freq} · ${d.clubs}</div>
+          <div style="font-size:.8rem;line-height:1.5;color:var(--text);">${d.desc}</div>
+        </div>`).join('');
+      html+=`<div class="analysis-card" style="border-color:${bc}">
         <div class="ac-head">
           <span class="ac-badge ${badgeClass}">${issue.tag}</span>
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.03em">${issue.title}</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:.03em">${issue.title}</span>
+          ${issue.clubs!==t('Todos','All')?`<span style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);margin-left:auto;">${issue.clubs}</span>`:''}
         </div>
         <div class="ac-stat">${issue.data}</div>
-        <div class="ac-fix">${issue.tips.map(t=>`<span class="tip">${t}</span>`).join('')}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:.5rem 0 .3rem;">${t('Drills recomendados:','Recommended drills:')}</div>
+        ${drillsHtml}
       </div>`;
     });
   }
-
   el.innerHTML=html;
 }
 
+// ═══════════════════════════════════════════════════════════════
+// PROGRESS TAB
+// ═══════════════════════════════════════════════════════════════
+let progressMetric='dist_total';
+const PROGRESS_METRICS=[
+  {k:'dist_total',  l:()=>t('Distancia total','Total distance'),  u:'m'},
+  {k:'calidad',     l:()=>t('Calidad impacto','Impact quality'),  u:''},
+  {k:'desv_total',  l:()=>t('Desviación lateral','Lateral deviation'), u:'m',signed:true},
+  {k:'cara_palo',   l:()=>t('Cara del palo','Face angle'),        u:'°',signed:true},
+  {k:'linea_cabeza',l:()=>t('Línea de swing','Swing path'),       u:'°',signed:true},
+  {k:'vel_bola',    l:()=>t('Velocidad bola','Ball speed'),       u:'m/s'},
+  {k:'altura_max',  l:()=>t('Altura máxima','Max height'),        u:'m'},
+  {k:'retroceso',   l:()=>t('Backspin','Backspin'),               u:'rpm'},
+  {k:'angulo_ataque',l:()=>t('Ángulo de ataque','Attack angle'),  u:'°',signed:true},
+];
+function buildProgress(){
+  const el=document.getElementById('progress-content');if(!el)return;
+  if(ALL_SESSIONS.length<2){
+    el.innerHTML=`<div style="color:var(--muted);font-family:'DM Mono',monospace;font-size:.7rem;padding:1rem;line-height:1.8;">
+      ${t('Necesitas al menos','You need at least')} <strong style="color:var(--text)">${t('2 sesiones cargadas','2 loaded sessions')}</strong> ${t('para ver el progreso.','to see progress.')}<br><br>
+      ${t('Carga sesiones desde la pestaña 📂 Datos.','Load sessions from the 📂 Data tab.')}
+    </div>`;
+    return;
+  }
+  const cfg=PROGRESS_METRICS.find(m=>m.k===progressMetric)||PROGRESS_METRICS[0];
+  // Compute per-session averages
+  const points=ALL_SESSIONS.map(sess=>{
+    const vals=sess.shots.filter(s=>s[progressMetric]!=null&&s.dist_total>0.5).map(s=>s[progressMetric]);
+    return{name:sess.name,date:sess.date,val:avg(vals),n:vals.length};
+  }).filter(p=>p.val!=null);
+  if(!points.length){el.innerHTML='<div style="color:var(--muted);font-family:\'DM Mono\',monospace;font-size:.7rem;padding:1rem;">Sin datos para esta métrica.</div>';return;}
+
+  // Draw chart
+  const W=el.offsetWidth||320;const H=180;
+  const canvasId='progress-canvas';
+  const mn=Math.min(...points.map(p=>p.val));
+  const mx=Math.max(...points.map(p=>p.val));
+  const range=mx-mn||1;
+  const padL=44,padR=12,padT=20,padB=36;
+  const mW=W-padL-padR,mH=H-padT-padB;
+  const toX=i=>(padL+i/(points.length-1)*mW);
+  const toY=v=>(padT+mH-(v-mn)/range*mH);
+
+  // Analysis text
+  const first=points[0].val,last=points[points.length-1].val;
+  const change=last-first;
+  const pct=Math.abs(change/first*100);
+  const improved=cfg.signed?(Math.abs(last)<Math.abs(first)):(last>first);
+  let explanation='';
+  if(cfg.k==='dist_total') explanation=improved?`Tu distancia media ha ${change>0?'aumentado':'disminuido'} ${Math.abs(change).toFixed(1)}m (${pct.toFixed(1)}%) desde la primera sesión. ${change>0?'Buen progreso — el aumento de distancia suele venir de mayor velocidad de palo o mejor calidad de impacto.':'Una ligera reducción puede ser normal si estás trabajando en precisión.'}`:explanation;
+  if(cfg.k==='calidad') explanation=improved?`Tu calidad de impacto ha mejorado ${Math.abs(change).toFixed(3)} puntos. Esto significa que transfieres más velocidad al a bola por cada unidad de velocidad de palo — tu contacto es más sólido.`:`La calidad de impacto ha bajado ${Math.abs(change).toFixed(3)} puntos. Puede indicar fatiga, cambio técnico, o condiciones de práctica distintas.`;
+  if(cfg.k==='desv_total') explanation=Math.abs(last)<Math.abs(first)?`Tu desviación lateral media se ha reducido ${Math.abs(change).toFixed(1)}m. Estás enviando la bola más cerca del objetivo — mejora clara en precisión.`:`La desviación lateral ha aumentado ${Math.abs(change).toFixed(1)}m. Revisa la pestaña Análisis para ver qué está causando la desviación.`;
+  if(cfg.k==='cara_palo') explanation=Math.abs(last)<Math.abs(first)?`La cara del palo está más cuadrada (${Math.abs(change).toFixed(2)}° de mejora). Menos curvatura lateral en las bolas.`:`La cara se está abriendo/cerrando más (${Math.abs(change).toFixed(2)}° de diferencia). Revisa el grip entre sesiones.`;
+  if(!explanation) explanation=t(
+    `Valor en primera sesión: ${fmt(first,2)}${cfg.u||''} → Última sesión: ${fmt(last,2)}${cfg.u||''}. Tendencia: ${improved?'✅ mejorando':'⚠ a trabajar'}.`,
+    `First session: ${fmt(first,2)}${cfg.u||''} → Latest session: ${fmt(last,2)}${cfg.u||''}. Trend: ${improved?'✅ improving':'⚠ needs work'}.`
+  );
+
+  let html=`
+  <!-- Metric selector -->
+  <div style="display:flex;gap:.3rem;overflow-x:auto;padding:.2rem 0 .6rem;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-bottom:.2rem;">
+    ${PROGRESS_METRICS.map(m=>`<button onclick="progressMetric='${m.k}';buildProgress();" style="flex-shrink:0;font-family:'DM Mono',monospace;font-size:.56rem;padding:.25rem .55rem;border-radius:3px;border:1px solid ${progressMetric===m.k?'var(--gl)':'var(--border)'};background:${progressMetric===m.k?'var(--gl)':'transparent'};color:${progressMetric===m.k?'#0d1b0f':'var(--muted)'};cursor:pointer;white-space:nowrap;">${m.l()}</button>`).join('')}
+  </div>
+
+  <!-- Chart -->
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.7rem;margin-bottom:.7rem;">
+    <canvas id="${canvasId}" width="${W}" height="${H}" style="width:100%;display:block;"></canvas>
+  </div>
+
+  <!-- Sessions list -->
+  <div style="display:grid;grid-template-columns:repeat(${Math.min(points.length,3)},1fr);gap:.4rem;margin-bottom:.7rem;">
+    ${points.map((p,i)=>{
+      const isLast=i===points.length-1;
+      const diff=i>0?p.val-points[i-1].val:null;
+      const color=diff==null?'var(--muted)':cfg.signed?(Math.abs(p.val)<Math.abs(points[i-1].val)?'#3cba54':'#f2994a'):(diff>0?'#3cba54':'#f2994a');
+      return`<div style="background:var(--card);border:1px solid ${isLast?'var(--gl)':'var(--border)'};border-radius:4px;padding:.5rem .6rem;text-align:center;">
+        <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:${isLast?'var(--gl)':'var(--text)'};">${fmt(p.val,cfg.k==='calidad'?3:1)}${cfg.u||''}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:.5rem;color:var(--muted);">${p.name}</div>
+        ${diff!=null?`<div style="font-family:'DM Mono',monospace;font-size:.52rem;color:${color};">${diff>0?'+':''}${diff.toFixed(cfg.k==='calidad'?3:1)}</div>`:''}
+      </div>`;
+    }).join('')}
+  </div>
+
+  <!-- Explanation -->
+  <div style="background:rgba(82,183,136,.07);border:1px solid rgba(82,183,136,.2);border-radius:5px;padding:.7rem .8rem;">
+    <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.3rem;">📈 ${t('Qué significa','What this means')}</div>
+    <div style="font-size:.82rem;line-height:1.6;color:var(--text);">${explanation}</div>
+  </div>`;
+
+  el.innerHTML=html;
+
+  // Draw canvas after DOM update
+  requestAnimationFrame(()=>{
+    const canvas=document.getElementById(canvasId);if(!canvas)return;
+    const ctx=canvas.getContext('2d');
+    ctx.fillStyle='#0c2a10';ctx.fillRect(0,0,W,H);
+    // Grid lines
+    [0,0.25,0.5,0.75,1].forEach(t=>{
+      const y=padT+mH*(1-t);const val=mn+range*t;
+      ctx.strokeStyle='rgba(255,255,255,.07)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(padL,y);ctx.lineTo(padL+mW,y);ctx.stroke();
+      ctx.fillStyle='rgba(180,210,180,.4)';ctx.font='9px monospace';ctx.textAlign='right';
+      ctx.fillText(Math.abs(val)<1?val.toFixed(2):val.toFixed(1),padL-4,y+3);
+    });
+    if(points.length<2){
+      ctx.fillStyle='#7a9e84';ctx.font='11px monospace';ctx.textAlign='center';
+      ctx.fillText('Necesitas más sesiones',W/2,H/2);return;
+    }
+    // Area fill
+    ctx.beginPath();ctx.moveTo(toX(0),toY(points[0].val));
+    points.forEach((p,i)=>{if(i>0)ctx.lineTo(toX(i),toY(p.val));});
+    ctx.lineTo(toX(points.length-1),padT+mH);ctx.lineTo(toX(0),padT+mH);ctx.closePath();
+    ctx.fillStyle='rgba(82,183,136,.12)';ctx.fill();
+    // Line
+    ctx.beginPath();ctx.moveTo(toX(0),toY(points[0].val));
+    points.forEach((p,i)=>{if(i>0)ctx.lineTo(toX(i),toY(p.val));});
+    ctx.strokeStyle='var(--gl)';ctx.lineWidth=2;ctx.stroke();
+    // Points
+    points.forEach((p,i)=>{
+      const isLast=i===points.length-1;
+      ctx.beginPath();ctx.arc(toX(i),toY(p.val),isLast?6:4,0,Math.PI*2);
+      ctx.fillStyle=isLast?'var(--gold)':'var(--gl)';ctx.fill();
+      ctx.fillStyle='rgba(180,210,180,.5)';ctx.font='8px monospace';ctx.textAlign='center';
+      ctx.fillText(p.name.substring(0,6),toX(i),H-4);
+    });
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════
+// DATA SCREEN
+// ═══════════════════════════════════════════════════════════════
+function buildDataScreen(){
+  const el=document.getElementById('sessions-list');if(!el)return;
+  if(!ALL_SESSIONS.length){el.innerHTML='<div style="color:var(--muted);font-family:\'DM Mono\',monospace;font-size:.65rem;">Sin sesiones guardadas aún.</div>';return;}
+  el.innerHTML=ALL_SESSIONS.map((sess,i)=>`
+    <div style="display:flex;align-items:center;gap:.5rem;padding:.5rem .6rem;background:${i===ALL_SESSIONS.length-1?'rgba(82,183,136,.08)':'var(--card)'};border:1px solid ${i===ALL_SESSIONS.length-1?'rgba(82,183,136,.3)':'var(--border)'};border-radius:4px;margin-bottom:.4rem;">
+      <div style="flex:1;">
+        <div style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--text);">${sess.name}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);">${sess.date} · ${sess.shots.length} golpes · ${[...new Set(sess.shots.map(s=>CLUB_ABBR[s.palo]||s.palo))].join(', ')}</div>
+      </div>
+      ${i===ALL_SESSIONS.length-1?'<span style="font-family:\'DM Mono\',monospace;font-size:.5rem;color:var(--gl);padding:.15rem .4rem;background:rgba(82,183,136,.15);border-radius:2px;">ÚLTIMA</span>':''}
+      <button onclick="deleteSession(${sess.id});buildDataScreen();applySessionData();render();" style="font-family:'DM Mono',monospace;font-size:.6rem;padding:.2rem .4rem;background:rgba(230,57,70,.15);color:var(--red);border:none;border-radius:3px;cursor:pointer;">✕</button>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// CSV LOADER (with session naming)
+// ═══════════════════════════════════════════════════════════════
+function initCSVLoader(){
+  const input=document.getElementById('csvInput-mob');if(!input)return;
+  input.onchange=function(e){
+    const file=e.target.files[0];if(!file)return;
+    const reader=new FileReader();
+    reader.onload=function(ev){
+      const parsed=parseCSV(ev.target.result);
+      const statusEl=document.getElementById('upload-status-mob');
+      if(parsed.length>0){
+        // Auto-name from file or date
+        const autoName=file.name.replace('.csv','').replace(/_/g,' ')||`Sesión ${new Date().toLocaleDateString('es-ES')}`;
+        addSession(parsed,autoName);
+        if(statusEl)statusEl.textContent=`✅ ${file.name} · ${parsed.length} golpes · ${ALL_SESSIONS.length} sesiones guardadas`;
+        hiddenSet=new Set();selectedIdx=null;legendFilters=new Set();tableFilters={};
+        buildDataScreen();render();
+      } else {
+        if(statusEl)statusEl.textContent='⚠ Sin datos válidos en el CSV.';
+      }
+    };
+    reader.onerror=()=>{const s=document.getElementById('upload-status-mob');if(s)s.textContent='⚠ Error al leer el fichero.';};
+    reader.readAsText(file,'utf-8');
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SCREENS & RENDER
+// ═══════════════════════════════════════════════════════════════
+function showScreen(id,tab){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  const screen=document.getElementById(id);if(screen)screen.classList.add('active');
+  if(tab)tab.classList.add('active');
+  if(id==='screen-map')setTimeout(()=>drawMapMob(),30);
+  if(id==='screen-stats')buildStatsMob();
+  if(id==='screen-shots')buildShotList();
+  if(id==='screen-analysis')buildAnalysis();
+  if(id==='screen-progress')buildProgress();
+  if(id==='screen-data'){buildDataScreen();}
+}
+function resetAll(){
+  hiddenSet=new Set();selectedIdx=null;legendFilters=new Set();tableFilters={};
+  sortKey='';sortDir=1;activeClub='Todos';render();
+}
+function render(){
+  buildStripMob();
+  buildTabsMob('tabs-mob');buildTabsMob('tabs-stats');
+  buildLegendMob();drawMapMob();
+  const activeScreen=document.querySelector('.screen.active');
+  const activeId=activeScreen?activeScreen.id:'screen-map';
+  if(activeId==='screen-stats')buildStatsMob();
+  if(activeId==='screen-shots')buildShotList();
+  if(activeId==='screen-analysis')buildAnalysis();
+  if(activeId==='screen-progress')buildProgress();
+  if(activeId==='screen-data')buildDataScreen();
+  const cntEl=document.getElementById('shot-count-mob');
+  if(cntEl)cntEl.textContent=`${getVisibleShots().length} visibles`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
 window.onerror=function(msg,src,line,col,err){
-  const body=document.body;
   const div=document.createElement('div');
   div.style.cssText='position:fixed;bottom:0;left:0;right:0;background:#1a0505;color:#f87;font-family:monospace;font-size:11px;padding:8px;z-index:9999;border-top:1px solid #f00;';
   div.textContent='Error: '+(err?err.message:msg)+' (línea '+line+')';
-  body.appendChild(div);
-  setTimeout(()=>div.remove(),8000);
+  document.body.appendChild(div);setTimeout(()=>div.remove(),8000);
   return false;
 };
 (function init(){
+  // Init colors from built-in session data
+  if(typeof SHOTS!=='undefined'&&SHOTS.length) assignClubColors(SHOTS);
+  loadFromStorage();
+  applyLang();
   initCSVLoader();
   initMapMob();
   document.getElementById('filter-overlay')?.addEventListener('click',()=>{closeFilterSheet();render();});
   document.getElementById('sort-mob')?.addEventListener('change',e=>{sortKey=e.target.value;buildShotList();});
+  // Toggle last session / all history
+  document.getElementById('toggle-session')?.addEventListener('change',e=>{
+    showOnlyLastSession=e.target.checked;applySessionData();render();
+  });
   window.addEventListener('resize',()=>drawMapMob());
   render();
 })();
 
 </script>
+</div><!-- /app-root -->
 </body>
 </html>
