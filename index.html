@@ -110,6 +110,27 @@ canvas{display:block;width:100%;touch-action:none;}
 /* Equipment edit */
 #equip-text{border-bottom:1px dashed rgba(82,183,136,.4);outline:none;cursor:text;}
 
+
+.analysis-section{margin-bottom:1rem;}
+.analysis-title{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--gl);letter-spacing:.04em;margin-bottom:.5rem;padding-bottom:.3rem;border-bottom:1px solid var(--border);}
+.analysis-card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.8rem .9rem;margin-bottom:.6rem;}
+.ac-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem;}
+.ac-palo{font-family:'DM Mono',monospace;font-size:.65rem;font-weight:600;}
+.ac-badge{font-family:'DM Mono',monospace;font-size:.55rem;padding:.15rem .4rem;border-radius:3px;}
+.badge-red{background:rgba(230,57,70,.2);color:#e63946;}
+.badge-orange{background:rgba(242,153,74,.2);color:#f2994a;}
+.badge-green{background:rgba(82,183,136,.2);color:#52b788;}
+.ac-stat{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);line-height:1.8;background:rgba(0,0,0,.2);padding:.4rem .6rem;border-radius:3px;margin-bottom:.4rem;}
+.ac-stat span{color:var(--text);}
+.ac-fix{font-size:.82rem;line-height:1.6;color:var(--text);}
+.ac-fix strong{color:var(--gl);}
+.ac-fix .tip{display:block;padding:.3rem 0;border-bottom:1px solid var(--border);}
+.ac-fix .tip:last-child{border-bottom:none;}
+.ac-fix .tip::before{content:"→ ";color:var(--gold);}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:.5rem;margin-bottom:.8rem;}
+.sg-box{background:var(--card);border:1px solid var(--border);border-radius:5px;padding:.6rem .7rem;text-align:center;}
+.sg-val{font-family:'Bebas Neue',sans-serif;font-size:1.4rem;line-height:1;}
+.sg-lbl{font-family:'DM Mono',monospace;font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:.15rem;}
 </style>
 </head>
 <body>
@@ -126,6 +147,7 @@ canvas{display:block;width:100%;touch-action:none;}
   <div class="nav-tab" data-screen="screen-stats" onclick="showScreen('screen-stats',this)">📊 Stats</div>
   <div class="nav-tab" data-screen="screen-shots" onclick="showScreen('screen-shots',this)">📋 Golpes</div>
   <div class="nav-tab" data-screen="screen-data" onclick="showScreen('screen-data',this)">📂 Datos</div>
+  <div class="nav-tab" data-screen="screen-analysis" onclick="showScreen('screen-analysis',this)">🎯 Análisis</div>
 </div>
 
 <!-- CAMPO -->
@@ -218,6 +240,13 @@ canvas{display:block;width:100%;touch-action:none;}
         1. Menú ⋮ → "Instalar aplicación"
       </p>
     </div>
+  </div>
+</div>
+
+<!-- ANÁLISIS -->
+<div class="screen" id="screen-analysis">
+  <div style="padding:.8rem;overflow-y:auto;">
+    <div id="analysis-content"></div>
   </div>
 </div>
 
@@ -486,6 +515,7 @@ function showScreen(id,tab){
   if(id==='screen-map') setTimeout(()=>drawMapMob(),30);
   if(id==='screen-stats') buildStatsMob();
   if(id==='screen-shots') buildShotList();
+  if(id==='screen-analysis') buildAnalysis();
 }
 function resetAll(){hiddenSet=new Set();selectedIdx=null;legendFilters=new Set();tableFilters={};sortKey='';sortDir=1;activeClub='Todos';render();}
 
@@ -801,19 +831,209 @@ function render(){
   buildTabsMob('tabs-mob');
   buildTabsMob('tabs-stats');
   buildLegendMob();
-  // Always rebuild map data even if not visible (for hit testing)
   drawMapMob();
-  // Only rebuild active screen to avoid errors on hidden elements
   const activeScreen=document.querySelector('.screen.active');
   const activeId=activeScreen?activeScreen.id:'screen-map';
   if(activeId==='screen-stats') buildStatsMob();
   if(activeId==='screen-shots') buildShotList();
-  // Always update shot list count
+  if(activeId==='screen-analysis') buildAnalysis();
   const cntEl=document.getElementById('shot-count-mob');
   if(cntEl) cntEl.textContent=`${getVisibleShots().length} visibles`;
 }
 
 // ── Init ──
+
+// ── Analysis ───────────────────────────────────────────────────────────────
+function buildAnalysis(){
+  const el=document.getElementById('analysis-content');
+  if(!el)return;
+  const allValid=SHOTS_CURRENT.filter(s=>s.dist_total>0.5);
+  if(!allValid.length){el.innerHTML='<div style="color:var(--muted);font-family:\'DM Mono\',monospace;font-size:.7rem;padding:1rem;">Carga una sesión CSV para ver el análisis.</div>';return;}
+
+  // Global swing stats
+  const glCara=avg(allValid.map(s=>s.cara_palo));
+  const glLinea=avg(allValid.map(s=>s.linea_cabeza));
+  const glAtaque=avg(allValid.map(s=>s.angulo_ataque));
+  const glEfecto=avg(allValid.map(s=>s.efecto_lat));
+  const glCal=avg(allValid.map(s=>s.calidad));
+  const glLat=avg(allValid.map(s=>s.desv_total));
+  const pctDer=allValid.filter(s=>(s.desv_total||0)>5).length/allValid.length*100;
+  const pctIzq=allValid.filter(s=>(s.desv_total||0)<-5).length/allValid.length*100;
+  const pctMalos=allValid.filter(s=>(s.calidad||0)<1.0).length/allValid.length*100;
+  const pctBuenos=allValid.filter(s=>(s.calidad||0)>=1.2).length/allValid.length*100;
+
+  // Build issues list from data
+  const issues=[];
+
+  // Swing path
+  if(glLinea!=null&&glLinea>4){
+    issues.push({
+      prio:'red',tag:'CRÍTICO',
+      title:'Swing Out-to-In',
+      data:`Línea swing: <span>${fmtSign(glLinea,1)}°</span> (ideal ±2°)`,
+      tips:[
+        'Drill de la toalla: pon una toalla a la derecha de la bola y pasa por dentro sin tocarla',
+        'Siente que el palo "cae por dentro" en la bajada antes del impacto',
+        'Grábate desde atrás — el palo debe bajar más plano que en el backswing',
+      ]
+    });
+  }
+
+  // Face angle global
+  if(glCara!=null&&Math.abs(glCara)>2){
+    const dir=glCara>0?'abierta (fade/slice)':'cerrada (draw/hook)';
+    issues.push({
+      prio:Math.abs(glCara)>4?'red':'orange',
+      tag:Math.abs(glCara)>4?'CRÍTICO':'IMPORTANTE',
+      title:`Cara del palo ${dir}`,
+      data:`Cara media: <span>${fmtSign(glCara,1)}°</span> (ideal ±1°)`,
+      tips:[
+        glCara>0?'Comprueba el grip: la V de la mano derecha debe apuntar al hombro derecho':'Abre ligeramente el grip — la V debe apuntar entre la barbilla y el hombro derecho',
+        glCara>0?'En el backswing: el filo del palo debe apuntar al cielo a las 9h, no hacia fuera':'Siente el antebrazo izquierdo rotando hacia dentro en el downswing',
+        'Usa impact tape para confirmar el ángulo de cara en el contacto',
+      ]
+    });
+  }
+
+  // Per-club face issues
+  CLUBS.forEach(club=>{
+    const shots=allValid.filter(s=>s.palo===club&&s.cara_palo!=null);
+    if(shots.length<3)return;
+    const cara=avg(shots.map(s=>s.cara_palo));
+    if(Math.abs(cara)>4&&Math.abs(cara)>(Math.abs(glCara||0)+1.5)){
+      issues.push({
+        prio:'orange',tag:'POR PALO',
+        title:`${CLUB_ABBR[club]||club} — cara especialmente ${cara>0?'abierta':'cerrada'}`,
+        data:`Cara ${CLUB_ABBR[club]}: <span>${fmtSign(cara,1)}°</span> vs media global ${fmtSign(glCara,1)}°`,
+        tips:[
+          `Revisa el grip específicamente con el ${club} antes de cada golpe`,
+          'Haz 3 swings lentos sintiendo la cara cuadrada antes de golpear',
+          `${cara>0?'Cierra':'Abre'} conscientemente la cara al address hasta que se sienta cuadrada — para ti eso ES cuadrada`,
+        ]
+      });
+    }
+  });
+
+  // Lateral dispersion
+  if(pctDer+pctIzq>40){
+    const dirMain=pctDer>pctIzq?'derecha':'izquierda';
+    issues.push({
+      prio:'orange',tag:'IMPORTANTE',
+      title:`Alta dispersión lateral (${Math.round(pctDer+pctIzq)}% fuera ±5m)`,
+      data:`Derecha: <span>${Math.round(pctDer)}%</span> · Izquierda: <span>${Math.round(pctIzq)}%</span> · Media: <span>${fmtSign(glLat,1)}m</span>`,
+      tips:[
+        `Tendencia principal a la ${dirMain} — trabaja ${dirMain==='derecha'?'el cierre de cara y path in-to-out':'el path más a la derecha y cara más abierta'}`,
+        'Impact tape en cada sesión para identificar el contacto en la cara',
+        'Reduce velocidad al 70% hasta estabilizar la dirección',
+      ]
+    });
+  }
+
+  // Angle of attack
+  if(glAtaque!=null&&glAtaque<-2){
+    issues.push({
+      prio:'orange',tag:'IMPORTANTE',
+      title:'Ángulo de ataque muy descendente',
+      data:`Ataque medio: <span>${fmtSign(glAtaque,1)}°</span> (ideal hierros −1° a −3°)`,
+      tips:[
+        'Mueve la bola ligeramente más atrás en el stance (hacia el pie derecho)',
+        'Siente que pegas "hacia abajo y a través" — el divot debe ser después de la bola',
+        'No intentes levantar la bola — el loft del palo ya lo hace',
+      ]
+    });
+  }
+
+  // Impact quality
+  if(pctMalos>15){
+    issues.push({
+      prio:'orange',tag:'IMPORTANTE',
+      title:`${Math.round(pctMalos)}% de golpes con mala calidad de impacto`,
+      data:`Calidad media: <span>${fmt(glCal,3)}</span> · Malos (<1.0): <span>${Math.round(pctMalos)}%</span> · Excelentes (≥1.2): <span>${Math.round(pctBuenos)}%</span>`,
+      tips:[
+        'Rutina pre-shot consistente — mismo proceso en cada golpe',
+        'Series más cortas (10 bolas máximo) con reset mental entre series',
+        'Marca con spray o impact tape para identificar el punto de contacto en la cara',
+      ]
+    });
+  }
+
+  // Per-club consistency
+  CLUBS.forEach(club=>{
+    const shots=allValid.filter(s=>s.palo===club&&s.dist_total>5);
+    if(shots.length<4)return;
+    const dists=shots.map(s=>s.dist_total);
+    const mean=avg(dists);
+    const sd=Math.sqrt(dists.reduce((a,v)=>(a+(v-mean)**2),0)/dists.length);
+    const pctLat=shots.filter(s=>Math.abs(s.desv_total||0)>15).length/shots.length*100;
+    if(sd>18||pctLat>40){
+      issues.push({
+        prio:'orange',tag:'CONSISTENCIA',
+        title:`${club} — alta dispersión`,
+        data:`Std distancia: <span>±${sd.toFixed(1)}m</span> · Golpes >15m lateral: <span>${Math.round(pctLat)}%</span>`,
+        tips:[
+          `Reduce velocidad del ${CLUB_ABBR[club]||club} al 80% y prioriza el centro de la cara`,
+          'Impact tape 2 sesiones seguidas para identificar el patrón de contacto',
+          sd>18?'La dispersión de distancia sugiere contactos fuera del sweet spot':'La dispersión lateral sugiere inconsistencia en la cara o el path',
+        ]
+      });
+    }
+  });
+
+  // Best clubs
+  const clubStats=CLUBS.map(club=>{
+    const shots=allValid.filter(s=>s.palo===club&&s.dist_total>5);
+    if(shots.length<3)return null;
+    const cal=avg(shots.map(s=>s.calidad));
+    const dists=shots.map(s=>s.dist_total);
+    const mean=avg(dists);
+    const sd=Math.sqrt(dists.reduce((a,v)=>(a+(v-mean)**2),0)/dists.length);
+    const pctLat=shots.filter(s=>Math.abs(s.desv_total||0)>15).length/shots.length*100;
+    return{club,cal,sd,pctLat,mean,n:shots.length};
+  }).filter(Boolean);
+
+  // Sort on separate copies so best/worst don't interfere
+  const bestClub=[...clubStats].sort((a,b)=>((b.cal||0)-(a.cal||0))-(b.sd-a.sd)*0.05)[0];
+  const worstClub=[...clubStats]
+    .filter(x=>x.club!==(bestClub&&bestClub.club))  // exclude best club
+    .sort((a,b)=>((a.cal||0)-(b.cal||0))+(a.pctLat-b.pctLat)*0.05+(a.sd-b.sd)*0.02)[0];
+
+  // Render
+  let html=`<div class="analysis-section">
+    <div class="analysis-title">📊 Resumen de sesión</div>
+    <div class="summary-grid">
+      <div class="sg-box"><div class="sg-val" style="color:var(--gl)">${allValid.length}</div><div class="sg-lbl">Golpes</div></div>
+      <div class="sg-box"><div class="sg-val" style="color:${glCal>=1.15?'#3cba54':glCal>=1.05?'#f2994a':'#e63946'}">${fmt(glCal,3)}</div><div class="sg-lbl">Calidad μ</div></div>
+      <div class="sg-box"><div class="sg-val" style="color:${Math.abs(glLinea||0)<3?'#3cba54':'#f2994a'}">${fmtSign(glLinea,1)}°</div><div class="sg-lbl">Línea swing μ</div></div>
+      <div class="sg-box"><div class="sg-val" style="color:${Math.abs(glCara||0)<2?'#3cba54':'#f2994a'}">${fmtSign(glCara,1)}°</div><div class="sg-lbl">Cara palo μ</div></div>
+      <div class="sg-box"><div class="sg-val" style="color:var(--gl)">${bestClub?CLUB_ABBR[bestClub.club]:'—'}</div><div class="sg-lbl">Mejor palo</div></div>
+      <div class="sg-box"><div class="sg-val" style="color:var(--red)">${worstClub?CLUB_ABBR[worstClub.club]:'—'}</div><div class="sg-lbl">A mejorar</div></div>
+    </div>
+  </div>`;
+
+  if(issues.length===0){
+    html+=`<div class="analysis-card" style="border-color:rgba(82,183,136,.4)">
+      <div class="ac-head"><span style="font-size:1.5rem">✅</span><span style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gl)">Sesión muy consistente</span></div>
+      <div class="ac-fix">No se detectan patrones problemáticos significativos. Mantén la rutina y trabaja en aumentar velocidad manteniendo la consistencia.</div>
+    </div>`;
+  } else {
+    html+=`<div class="analysis-title">⚠ Puntos a corregir (${issues.length})</div>`;
+    issues.forEach(issue=>{
+      const borderColor=issue.prio==='red'?'rgba(230,57,70,.4)':issue.prio==='orange'?'rgba(242,153,74,.3)':'rgba(82,183,136,.25)';
+      const badgeClass=issue.prio==='red'?'badge-red':issue.prio==='orange'?'badge-orange':'badge-green';
+      html+=`<div class="analysis-card" style="border-color:${borderColor}">
+        <div class="ac-head">
+          <span class="ac-badge ${badgeClass}">${issue.tag}</span>
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;letter-spacing:.03em">${issue.title}</span>
+        </div>
+        <div class="ac-stat">${issue.data}</div>
+        <div class="ac-fix">${issue.tips.map(t=>`<span class="tip">${t}</span>`).join('')}</div>
+      </div>`;
+    });
+  }
+
+  el.innerHTML=html;
+}
+
 window.onerror=function(msg,src,line,col,err){
   const body=document.body;
   const div=document.createElement('div');
