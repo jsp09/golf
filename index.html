@@ -63,6 +63,7 @@ window._signOut = async function() {
   await _auth.signOut();
   ALL_SESSIONS = []; SHOTS_CURRENT = []; CLUBS = [];
   CLUB_COLORS = {}; CLUB_ABBR = {};
+  viewSessionId = null; analysisSessionId = null; showOnlyLastSession = false;
   render();
 };
 
@@ -70,16 +71,18 @@ window._signOut = async function() {
 window._loadSessionsFromFirestore = async function(uid) {
   const statusEl = document.getElementById('upload-status-mob');
   try {
-    if(statusEl) statusEl.textContent = '⏳ Cargando sesiones...';
+    if(statusEl) statusEl.textContent = typeof t==='function'?t('⏳ Cargando sesiones...','⏳ Loading sessions...'):'⏳ Cargando sesiones...';
     const snap = await _db.collection('users').doc(uid)
                           .collection('sessions').orderBy('id').get();
     ALL_SESSIONS = [];
     snap.forEach(d => ALL_SESSIONS.push(d.data()));
     if(ALL_SESSIONS.length) {
       applySessionData();
-      if(statusEl) statusEl.textContent = `✅ ${ALL_SESSIONS.length} ${LANG==='en'?'sessions loaded':'sesiones cargadas'}`;
+      const lg=localStorage.getItem('golf_lang')||'es';
+      if(statusEl) statusEl.textContent = `✅ ${ALL_SESSIONS.length} ${lg==='en'?'sessions loaded':'sesiones cargadas'}`;
     } else {
-      if(statusEl) statusEl.textContent = LANG==='en'?'No sessions yet.':'Sin sesiones guardadas aún.';
+      const lg=localStorage.getItem('golf_lang')||'es';
+      if(statusEl) statusEl.textContent = lg==='en'?'No sessions yet.':'Sin sesiones guardadas aún.';
     }
     buildDataScreen(); render();
   } catch(e) {
@@ -300,7 +303,7 @@ canvas{display:block;width:100%;touch-action:none;}
     <img id="user-avatar" style="width:22px;height:22px;border-radius:50%;object-fit:cover;display:none;" src="" alt="">
     <span id="user-name" style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);"></span>
   </div>
-  <button onclick="window._signOut()" style="font-family:'DM Mono',monospace;font-size:.55rem;padding:.2rem .5rem;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:3px;cursor:pointer;">Salir</button>
+  <button id="logout-btn" onclick="window._signOut()" style="font-family:'DM Mono',monospace;font-size:.55rem;padding:.2rem .5rem;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:3px;cursor:pointer;">Salir</button>
   <button id="lang-toggle" onclick="setLang(LANG==='es'?'en':'es')" style="font-family:'DM Mono',monospace;font-size:.55rem;padding:.2rem .5rem;background:transparent;border:1px solid var(--border);color:var(--muted);border-radius:3px;cursor:pointer;">🌐 EN</button>
 </div>
 
@@ -327,17 +330,7 @@ canvas{display:block;width:100%;touch-action:none;}
   <div class="club-scroll" id="tabs-mob"></div>
   <div class="color-row">
     <span class="color-label">Color:</span>
-    <select id="colorBy-mob" onchange="colorBy=this.value;legendFilters=new Set();buildLegendMob();drawMapMob();">
-      <option value="calidad">Calidad</option>
-      <option value="dist_total">Distancia</option>
-      <option value="desv_total">Lateral</option>
-      <option value="cara_palo">Cara palo</option>
-      <option value="efecto_lat">Ef. lateral</option>
-      <option value="angulo_ataque">Ataque</option>
-      <option value="vel_bola">Vel. bola</option>
-      <option value="altura_max">Alt. máx.</option>
-      <option value="retroceso">Backspin</option>
-    </select>
+    <select id="colorBy-mob" onchange="colorBy=this.value;legendFilters=new Set();buildLegendMob();drawMapMob();"></select>
     <button class="reset-mob" onclick="resetAll()">↺ Reset</button>
   </div>
   <div class="legend-scroll" id="legend-mob"></div>
@@ -355,7 +348,7 @@ canvas{display:block;width:100%;touch-action:none;}
     <div class="lat-wrap">
       <div style="font-family:'DM Mono',monospace;font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;" id="lat-lbl-mob">Dispersión lateral</div>
       <div class="lat-field" id="lat-field-mob"><div class="lat-center"></div></div>
-      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:.5rem;color:var(--muted);margin-top:.2rem;"><span>◄ Izq</span><span>Centro</span><span>Der ►</span></div>
+      <div style="display:flex;justify-content:space-between;font-family:'DM Mono',monospace;font-size:.5rem;color:var(--muted);margin-top:.2rem;"><span id="lat-left-mob">◄ Izq</span><span id="lat-center-mob">Centro</span><span id="lat-right-mob">Der ►</span></div>
     </div>
     <div id="detail-selected"></div>
   </div>
@@ -364,16 +357,8 @@ canvas{display:block;width:100%;touch-action:none;}
 <!-- GOLPES -->
 <div class="screen" id="screen-shots">
   <div class="table-controls-mob">
-    <span style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);flex-shrink:0;">Ordenar:</span>
-    <select id="sort-mob" style="font-family:'DM Mono',monospace;font-size:.6rem;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:.25rem .4rem;">
-      <option value="">—</option>
-      <option value="dist_total">Distancia</option>
-      <option value="desv_total">Lateral</option>
-      <option value="calidad">Calidad</option>
-      <option value="cara_palo">Cara palo</option>
-      <option value="vel_bola">Vel. bola</option>
-      <option value="altura_max">Alt. máx.</option>
-    </select>
+    <span id="sort-label-mob" style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);flex-shrink:0;">Ordenar:</span>
+    <select id="sort-mob" style="font-family:'DM Mono',monospace;font-size:.6rem;background:var(--card);color:var(--text);border:1px solid var(--border);border-radius:3px;padding:.25rem .4rem;"></select>
     <button class="reset-mob" onclick="sortDir*=-1;buildShotList()">⇅</button>
     <span id="shot-count-mob" style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);flex-shrink:0;"></span>
   </div>
@@ -400,18 +385,8 @@ canvas{display:block;width:100%;touch-action:none;}
 <div class="screen" id="screen-data">
   <div style="padding:1rem;overflow-y:auto;-webkit-overflow-scrolling:touch;">
 
-    <!-- Toggle histórico / última sesión -->
-    <div style="display:flex;align-items:center;gap:.8rem;padding:.6rem .8rem;background:var(--card);border:1px solid var(--border);border-radius:6px;margin-bottom:.8rem;">
-      <div style="flex:1;">
-        <div style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:var(--gl);">Modo de visualización</div>
-        <div style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);margin-top:.1rem;">Histórico acumulado vs solo última sesión</div>
-      </div>
-      <label style="display:flex;align-items:center;gap:.4rem;cursor:pointer;">
-        <span style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);">Histórico</span>
-        <input type="checkbox" id="toggle-session" style="width:16px;height:16px;cursor:pointer;">
-        <span style="font-family:'DM Mono',monospace;font-size:.58rem;color:var(--muted);">Solo última</span>
-      </label>
-    </div>
+    <!-- Toggle histórico / última sesión (hidden — session selection is in the list below) -->
+    <input type="checkbox" id="toggle-session" style="display:none;">
 
     <!-- Upload -->
     <div class="upload-area">
@@ -428,14 +403,14 @@ canvas{display:block;width:100%;touch-action:none;}
 
     <!-- Session list -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.85rem;margin-top:.8rem;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:var(--gl);margin-bottom:.5rem;">Sesiones guardadas</div>
+      <div id="sessions-header" style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:var(--gl);margin-bottom:.5rem;">Sesiones guardadas</div>
       <div id="sessions-list"></div>
     </div>
 
     <!-- Install instructions -->
     <div style="background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.85rem;margin-top:.8rem;">
-      <div style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:var(--gl);margin-bottom:.4rem;">Instalar como App</div>
-      <p style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.9;">
+      <div id="install-header" style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;color:var(--gl);margin-bottom:.4rem;">Instalar como App</div>
+      <p id="install-text" style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.9;">
         <strong style="color:var(--text)">iPhone (Safari):</strong><br>
         Toca □↑ → "Añadir a pantalla de inicio"<br><br>
         <strong style="color:var(--text)">Android (Chrome):</strong><br>
@@ -450,11 +425,11 @@ canvas{display:block;width:100%;touch-action:none;}
 <div class="filter-overlay" id="filter-overlay"></div>
 <div class="filter-sheet" id="filter-sheet">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:.8rem;">
-    <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gl);">Filtros</div>
-    <button onclick="saveCurrentFilter();" style="font-family:'DM Mono',monospace;font-size:.6rem;padding:.3rem .6rem;background:rgba(233,196,106,.12);color:var(--gold);border:1px solid rgba(233,196,106,.3);border-radius:3px;cursor:pointer;">💾 Guardar filtro</button>
+    <div id="filter-sheet-title" style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;color:var(--gl);">Filtros</div>
+    <button id="filter-save-btn" onclick="saveCurrentFilter();" style="font-family:'DM Mono',monospace;font-size:.6rem;padding:.3rem .6rem;background:rgba(233,196,106,.12);color:var(--gold);border:1px solid rgba(233,196,106,.3);border-radius:3px;cursor:pointer;">💾 Guardar filtro</button>
   </div>
   <div id="filter-content-mob"></div>
-  <button onclick="closeFilterSheet();render();" style="width:100%;margin-top:.8rem;padding:.55rem;border-radius:4px;background:var(--gl);color:#0d1b0f;font-family:'Bebas Neue',sans-serif;font-size:.95rem;border:none;cursor:pointer;">Aplicar</button>
+  <button id="filter-apply-btn" onclick="closeFilterSheet();render();" style="width:100%;margin-top:.8rem;padding:.55rem;border-radius:4px;background:var(--gl);color:#0d1b0f;font-family:'Bebas Neue',sans-serif;font-size:.95rem;border:none;cursor:pointer;">Aplicar</button>
 </div>
 
 <script>
@@ -599,26 +574,26 @@ const SHOTS = [{"fecha":"24/4/26 8:15:48","palo":"Sand Wedge","vel_palo":30.77,"
 
 const COLOR_CONFIG={
   calidad:{label:'Calidad impacto',
-    buckets:[{k:'q-ex',c:'hsl(120,75%,45%)',l:'≥1.20 excelente',test:v=>v>=1.2},
-             {k:'q-ok',c:'hsl(55,90%,50%)',l:'1.10–1.20 bueno',test:v=>v>=1.1&&v<1.2},
-             {k:'q-av',c:'hsl(30,90%,52%)',l:'1.00–1.10 regular',test:v=>v>=1.0&&v<1.1},
-             {k:'q-ba',c:'hsl(0,85%,50%)',l:'<1.00 malo',test:v=>v<1.0}],
+    buckets:[{k:'q-ex',c:'hsl(120,75%,45%)',l:'≥1.20 excelente',le:'≥1.20 excellent',test:v=>v>=1.2},
+             {k:'q-ok',c:'hsl(55,90%,50%)',l:'1.10–1.20 bueno',le:'1.10–1.20 good',test:v=>v>=1.1&&v<1.2},
+             {k:'q-av',c:'hsl(30,90%,52%)',l:'1.00–1.10 regular',le:'1.00–1.10 average',test:v=>v>=1.0&&v<1.1},
+             {k:'q-ba',c:'hsl(0,85%,50%)',l:'<1.00 malo',le:'<1.00 poor',test:v=>v<1.0}],
     fn:v=>{if(v==null)return'#556b5a';if(v<1.0)return'hsl(0,85%,50%)';if(v<1.1)return'hsl(30,90%,52%)';if(v<1.2)return'hsl(55,90%,50%)';return'hsl(120,75%,45%)';}},
   dist_total:{label:'Distancia total',unit:'m',dynamicBuckets:true,
     fn:(v,mn,mx)=>{const t=mx>mn?(v-mn)/(mx-mn):0.5;return `hsl(${Math.round(t*120)},75%,48%)`;}},
   dist_vuelo:{label:'Dist. vuelo',unit:'m',dynamicBuckets:true,
     fn:(v,mn,mx)=>{const t=mx>mn?(v-mn)/(mx-mn):0.5;return `hsl(${Math.round(t*120)},75%,48%)`;}},
   desv_total:{label:'Desv. lateral',unit:'m',signed:true,
-    buckets:[{k:'dl-ll',c:'#3060c0',l:'<−15m izq',test:v=>v<-15},{k:'dl-l',c:'#6fa8dc',l:'−15 a −5m',test:v=>v>=-15&&v<-5},{k:'dl-c',c:'#aaa',l:'Centro ±5m',test:v=>Math.abs(v)<=5},{k:'dl-r',c:'#f2994a',l:'+5 a +15m',test:v=>v>5&&v<=15},{k:'dl-rr',c:'#e63946',l:'>+15m der',test:v=>v>15}],
+    buckets:[{k:'dl-ll',c:'#3060c0',l:'<−15m izq',le:'<−15m L',test:v=>v<-15},{k:'dl-l',c:'#6fa8dc',l:'−15 a −5m',le:'−15 to −5m',test:v=>v>=-15&&v<-5},{k:'dl-c',c:'#aaa',l:'Centro ±5m',le:'Center ±5m',test:v=>Math.abs(v)<=5},{k:'dl-r',c:'#f2994a',l:'+5 a +15m',le:'+5 to +15m',test:v=>v>5&&v<=15},{k:'dl-rr',c:'#e63946',l:'>+15m der',le:'>+15m R',test:v=>v>15}],
     fn:v=>{if(v==null)return'#556b5a';if(v<-15)return'#3060c0';if(v<-5)return'#6fa8dc';if(v>15)return'#e63946';if(v>5)return'#f2994a';return'#888';}},
   cara_palo:{label:'Cara del palo',unit:'°',signed:true,
-    buckets:[{k:'cp-dc',c:'#3060c0',l:'<−5° muy cerrada',test:v=>v<-5},{k:'cp-d',c:'#6fa8dc',l:'−5 a −2° cerrada',test:v=>v>=-5&&v<-2},{k:'cp-c',c:'#aaa',l:'±2° cuadrada',test:v=>Math.abs(v)<=2},{k:'cp-f',c:'#f2994a',l:'+2 a +5° abierta',test:v=>v>2&&v<=5},{k:'cp-ff',c:'#e63946',l:'>+5° muy abierta',test:v=>v>5}],
+    buckets:[{k:'cp-dc',c:'#3060c0',l:'<−5° muy cerrada',le:'<−5° very closed',test:v=>v<-5},{k:'cp-d',c:'#6fa8dc',l:'−5 a −2° cerrada',le:'−5 to −2° closed',test:v=>v>=-5&&v<-2},{k:'cp-c',c:'#aaa',l:'±2° cuadrada',le:'±2° square',test:v=>Math.abs(v)<=2},{k:'cp-f',c:'#f2994a',l:'+2 a +5° abierta',le:'+2 to +5° open',test:v=>v>2&&v<=5},{k:'cp-ff',c:'#e63946',l:'>+5° muy abierta',le:'>+5° very open',test:v=>v>5}],
     fn:v=>{if(v==null)return'#556b5a';const t=Math.max(-1,Math.min(1,v/10));if(t>0)return `hsl(${30-t*10},${80+t*10}%,${48+t*7}%)`;return `hsl(${210+Math.abs(t)*20},75%,${48+Math.abs(t)*7}%)`;}},
   efecto_lat:{label:'Efecto lateral',unit:' rpm',signed:true,
-    buckets:[{k:'el-dd',c:'#3060c0',l:'<−1500 draw fuerte',test:v=>v<-1500},{k:'el-d',c:'#6fa8dc',l:'−1500 a −500',test:v=>v>=-1500&&v<-500},{k:'el-c',c:'#aaa',l:'Neutro ±500',test:v=>Math.abs(v)<=500},{k:'el-f',c:'#f2994a',l:'+500 a +1500',test:v=>v>500&&v<=1500},{k:'el-ff',c:'#e63946',l:'>+1500 fade fuerte',test:v=>v>1500}],
+    buckets:[{k:'el-dd',c:'#3060c0',l:'<−1500 draw fuerte',le:'<−1500 strong draw',test:v=>v<-1500},{k:'el-d',c:'#6fa8dc',l:'−1500 a −500',le:'−1500 to −500',test:v=>v>=-1500&&v<-500},{k:'el-c',c:'#aaa',l:'Neutro ±500',le:'Neutral ±500',test:v=>Math.abs(v)<=500},{k:'el-f',c:'#f2994a',l:'+500 a +1500',le:'+500 to +1500',test:v=>v>500&&v<=1500},{k:'el-ff',c:'#e63946',l:'>+1500 fade fuerte',le:'>+1500 strong fade',test:v=>v>1500}],
     fn:v=>{if(v==null)return'#556b5a';const t=Math.max(-1,Math.min(1,v/3000));if(t>0)return `hsl(${30-t*10},85%,50%)`;return `hsl(${210+Math.abs(t)*20},80%,52%)`;}},
   angulo_ataque:{label:'Ángulo de ataque',unit:'°',signed:true,
-    buckets:[{k:'aa-dd',c:'#e63946',l:'<−3° muy bajo',test:v=>v<-3},{k:'aa-d',c:'#f2994a',l:'−3 a −1°',test:v=>v>=-3&&v<-1},{k:'aa-c',c:'#aaa',l:'Neutro ±1°',test:v=>Math.abs(v)<=1},{k:'aa-a',c:'#6fcf97',l:'+1 a +3°',test:v=>v>1&&v<=3},{k:'aa-aa',c:'#3cba54',l:'>+3° ascendente',test:v=>v>3}],
+    buckets:[{k:'aa-dd',c:'#e63946',l:'<−3° muy bajo',le:'<−3° very steep',test:v=>v<-3},{k:'aa-d',c:'#f2994a',l:'−3 a −1°',le:'−3 to −1°',test:v=>v>=-3&&v<-1},{k:'aa-c',c:'#aaa',l:'Neutro ±1°',le:'Neutral ±1°',test:v=>Math.abs(v)<=1},{k:'aa-a',c:'#6fcf97',l:'+1 a +3°',le:'+1 to +3°',test:v=>v>1&&v<=3},{k:'aa-aa',c:'#3cba54',l:'>+3° ascendente',le:'>+3° ascending',test:v=>v>3}],
     fn:v=>{if(v==null)return'#556b5a';const t=Math.max(-1,Math.min(1,v/8));if(t>0)return `hsl(${110+t*10},75%,45%)`;return `hsl(${0+Math.abs(t)*10},80%,50%)`;}},
   retroceso:{label:'Backspin',unit:' rpm',dynamicBuckets:true,
     fn:(v,mn,mx)=>{const t=mx>mn?(v-mn)/(mx-mn):0.5;return `hsl(${Math.round(270-t*150)},70%,52%)`;}},
@@ -698,14 +673,21 @@ const CLUB_GROUPS={
   'Todos los hierros':['Hierro 9','Hierro 8','Hierro 7','Hierro 6','Hierro 5'],
 };
 const ALL_PARAMS=[
-  {k:'dist_total',l:'Dist.',u:'m',d:1},{k:'dist_vuelo',l:'Vuelo',u:'m',d:1},
-  {k:'desv_total',l:'Lateral',u:'m',d:1,signed:true},{k:'altura_max',l:'Alt.máx',u:'m',d:1},
-  {k:'vel_palo',l:'VelPalo',u:'m/s',d:1},{k:'vel_bola',l:'VelBola',u:'m/s',d:1},
-  {k:'cara_palo',l:'Cara',u:'°',d:2,signed:true},{k:'linea_cabeza',l:'Línea',u:'°',d:2,signed:true},
-  {k:'angulo_ataque',l:'Ataque',u:'°',d:2,signed:true},{k:'retroceso',l:'Backspin',u:'rpm',d:0},
-  {k:'efecto_lat',l:'EfLat',u:'rpm',d:0,signed:true},{k:'vel_rotacion',l:'VelRot',u:'rpm',d:0},
-  {k:'eje_rotacion',l:'EjeRot',u:'°',d:1,signed:true},{k:'calidad',l:'Calidad',u:'',d:3},
-  {k:'angulo_lanzamiento',l:'ÁngLanz',u:'°',d:1},
+  {k:'dist_total',   l:'Dist.',   le:'Dist.',    u:'m',   d:1},
+  {k:'dist_vuelo',   l:'Vuelo',   le:'Carry',    u:'m',   d:1},
+  {k:'desv_total',   l:'Lateral', le:'Lateral',  u:'m',   d:1,signed:true},
+  {k:'altura_max',   l:'Alt.máx', le:'Max ht',   u:'m',   d:1},
+  {k:'vel_palo',     l:'VelPalo', le:'ClbSpd',   u:'m/s', d:1},
+  {k:'vel_bola',     l:'VelBola', le:'BallSpd',  u:'m/s', d:1},
+  {k:'cara_palo',    l:'Cara',    le:'Face',      u:'°',   d:2,signed:true},
+  {k:'linea_cabeza', l:'Línea',   le:'Path',      u:'°',   d:2,signed:true},
+  {k:'angulo_ataque',l:'Ataque',  le:'AoA',       u:'°',   d:2,signed:true},
+  {k:'retroceso',    l:'Backspin',le:'Backspin',  u:'rpm', d:0},
+  {k:'efecto_lat',   l:'EfLat',   le:'SideSpin',  u:'rpm', d:0,signed:true},
+  {k:'vel_rotacion', l:'VelRot',  le:'SpinRate',  u:'rpm', d:0},
+  {k:'eje_rotacion', l:'EjeRot',  le:'SpinAxis',  u:'°',   d:1,signed:true},
+  {k:'calidad',      l:'Calidad', le:'Smash',     u:'',    d:3},
+  {k:'angulo_lanzamiento',l:'ÁngLanz',le:'Launch',u:'°',   d:1},
 ];
 
 // ── DRILLS LIBRARY (ES + EN, symmetric) ────────────────────────
@@ -865,8 +847,10 @@ let tableFilters   = {};
 let canvasHitShots = [];
 let savedFilters   = [];    // [{name, club, tableFilters, legendFilters}]
 let analysisClubFilter = 'Todos';
+let analysisSessionId = null;   // null = all sessions, or session.id
 let shotsClubFilter = 'Todos';
 let showOnlyLastSession = false;
+let viewSessionId = null;       // null = all history, or session.id to view only that one
 
 // ── LANGUAGE ────────────────────────────────────────────────────
 let LANG = localStorage.getItem('golf_lang') || 'es';
@@ -890,6 +874,9 @@ function applyLang(){
   // Lang toggle button
   const btn = document.getElementById('lang-toggle');
   if(btn) btn.textContent = LANG==='en' ? '🌐 ES' : '🌐 EN';
+  // Logout button
+  const logoutBtn = document.getElementById('logout-btn');
+  if(logoutBtn) logoutBtn.textContent = t('Salir','Sign out');
   // Upload area
   const uploadTitle = document.querySelector('.upload-title');
   if(uploadTitle) uploadTitle.textContent = t('Cargar Sesión','Load Session');
@@ -900,15 +887,70 @@ function applyLang(){
   );
   const uploadBtn = document.querySelector('label[for="csvInput-mob"]');
   if(uploadBtn) uploadBtn.textContent = t('📁 Seleccionar CSV','📁 Select CSV');
+  // Upload initial status text (only when it's the placeholder)
+  const statusEl = document.getElementById('upload-status-mob');
+  if(statusEl && ['Carga tu primera sesión','Load your first session'].includes(statusEl.textContent))
+    statusEl.textContent = t('Carga tu primera sesión','Load your first session');
   // Sessions header
-  const sessHeader = document.querySelector('#screen-data .sessions-header');
+  const sessHeader = document.getElementById('sessions-header');
   if(sessHeader) sessHeader.textContent = t('Sesiones guardadas','Saved sessions');
+  // Install section
+  const installHdr = document.getElementById('install-header');
+  if(installHdr) installHdr.textContent = t('Instalar como App','Install as App');
+  const installTxt = document.getElementById('install-text');
+  if(installTxt) installTxt.innerHTML = t(
+    '<strong style="color:var(--text)">iPhone (Safari):</strong><br>Toca □↑ → "Añadir a pantalla de inicio"<br><br><strong style="color:var(--text)">Android (Chrome):</strong><br>Menú ⋮ → "Instalar aplicación"',
+    '<strong style="color:var(--text)">iPhone (Safari):</strong><br>Tap □↑ → "Add to Home Screen"<br><br><strong style="color:var(--text)">Android (Chrome):</strong><br>Menu ⋮ → "Install app"'
+  );
   // Color label
   const colorLabel = document.querySelector('.color-label');
   if(colorLabel) colorLabel.textContent = t('Color:','Color:');
-  // Toggle session
-  const togLabel = document.getElementById('toggle-last-label');
-  if(togLabel) togLabel.innerHTML = t('Histórico','History') + ' <input type="checkbox" id="toggle-session" style="width:16px;height:16px;cursor:pointer;"> ' + t('Solo última','Last only');
+  // Color selector — rebuild options preserving current value
+  const colorSel = document.getElementById('colorBy-mob');
+  if(colorSel){
+    const cur = colorSel.value || colorBy;
+    colorSel.innerHTML=[
+      ['calidad',      t('Calidad','Quality')],
+      ['dist_total',   t('Distancia','Distance')],
+      ['desv_total',   t('Lateral','Lateral')],
+      ['cara_palo',    t('Cara palo','Face angle')],
+      ['efecto_lat',   t('Ef. lateral','Side spin')],
+      ['angulo_ataque',t('Ataque','Attack angle')],
+      ['vel_bola',     t('Vel. bola','Ball speed')],
+      ['altura_max',   t('Alt. máx.','Max height')],
+      ['retroceso',    'Backspin'],
+    ].map(([v,l])=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`).join('');
+  }
+  // Sort label + selector
+  const sortLbl = document.getElementById('sort-label-mob');
+  if(sortLbl) sortLbl.textContent = t('Ordenar:','Sort:');
+  const sortSel = document.getElementById('sort-mob');
+  if(sortSel){
+    const cur = sortSel.value || sortKey;
+    sortSel.innerHTML=[
+      ['',           '—'],
+      ['dist_total', t('Distancia','Distance')],
+      ['desv_total', t('Lateral','Lateral')],
+      ['calidad',    t('Calidad','Quality')],
+      ['cara_palo',  t('Cara palo','Face angle')],
+      ['vel_bola',   t('Vel. bola','Ball speed')],
+      ['altura_max', t('Alt. máx.','Max height')],
+    ].map(([v,l])=>`<option value="${v}"${cur===v?' selected':''}>${l}</option>`).join('');
+  }
+  // Lateral direction labels (Stats tab)
+  const latLeft = document.getElementById('lat-left-mob');
+  if(latLeft) latLeft.textContent = t('◄ Izq','◄ L');
+  const latCtr = document.getElementById('lat-center-mob');
+  if(latCtr) latCtr.textContent = t('Centro','Center');
+  const latRight = document.getElementById('lat-right-mob');
+  if(latRight) latRight.textContent = t('Der ►','R ►');
+  // Filter sheet
+  const filterTitle = document.getElementById('filter-sheet-title');
+  if(filterTitle) filterTitle.textContent = t('Filtros','Filters');
+  const filterSaveBtn = document.getElementById('filter-save-btn');
+  if(filterSaveBtn) filterSaveBtn.textContent = t('💾 Guardar filtro','💾 Save filter');
+  const filterApplyBtn = document.getElementById('filter-apply-btn');
+  if(filterApplyBtn) filterApplyBtn.textContent = t('Aplicar','Apply');
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -929,7 +971,10 @@ function loadFromStorage(){
 }
 function applySessionData(){
   if(!ALL_SESSIONS.length) return;
-  if(showOnlyLastSession){
+  if(viewSessionId!==null){
+    const sess=ALL_SESSIONS.find(s=>s.id===viewSessionId);
+    SHOTS_CURRENT=sess?sess.shots.slice():ALL_SESSIONS.flatMap(s=>s.shots);
+  } else if(showOnlyLastSession){
     SHOTS_CURRENT=ALL_SESSIONS[ALL_SESSIONS.length-1].shots;
   } else {
     SHOTS_CURRENT=ALL_SESSIONS.flatMap(s=>s.shots);
@@ -938,7 +983,7 @@ function applySessionData(){
 }
 function addSession(shots, name){
   const session={
-    name: name||`Sesión ${ALL_SESSIONS.length+1}`,
+    name: name||`${t('Sesión','Session')} ${ALL_SESSIONS.length+1}`,
     date: new Date().toLocaleDateString('es-ES'),
     shots: shots,
     id: Date.now(),
@@ -1041,10 +1086,10 @@ function getShotColor(s,all){
 function buildStripMob(){
   const vis=getVisibleShots();
   document.getElementById('strip-mob').innerHTML=[
-    {v:vis.length+(hiddenSet.size?` <span style="color:var(--red)">−${hiddenSet.size}</span>`:''),l:'Golpes'},
+    {v:vis.length+(hiddenSet.size?` <span style="color:var(--red)">−${hiddenSet.size}</span>`:''),l:t('Golpes','Shots')},
     {v:fmt(avg(vis.map(s=>s.dist_total)))+'m',l:'Dist.μ'},
     {v:fmtSign(avg(vis.map(s=>s.desv_total)))+'m',l:'Lat.μ'},
-    {v:fmt(avg(vis.map(s=>s.calidad)),3),l:'Cal.μ'},
+    {v:fmt(avg(vis.map(s=>s.calidad)),3),l:t('Calidad','Quality')+'μ'},
   ].map(x=>`<div class="si"><div class="sv">${x.v}</div><div class="sl">${x.l}</div></div>`).join('');
 }
 
@@ -1061,7 +1106,7 @@ function buildTabsMob(id){
     b.onclick=()=>{activeClub=v;selectedIdx=null;render();};
     c.appendChild(b);
   };
-  make('Todos','Todos',null);
+  make(t('Todos','All'),'Todos',null);
   CLUBS.forEach(n=>make(CLUB_ABBR[n],n,CLUB_COLORS[n]));
 }
 
@@ -1076,7 +1121,7 @@ function buildShotsClubFilter(){
     b.onclick=()=>{shotsClubFilter=v;buildShotList();};
     c.appendChild(b);
   };
-  make('Todos','Todos',null);
+  make(t('Todos','All'),'Todos',null);
   CLUBS.forEach(n=>make(CLUB_ABBR[n],n,CLUB_COLORS[n]));
 }
 
@@ -1093,7 +1138,7 @@ function buildLegendMob(){
     });
   }
   if(cfg.buckets&&!cfg.dynamicBuckets){
-    el.innerHTML=cfg.buckets.map(b=>`<div class="leg-item${legendFilters.has(b.k)?' active-filter':''}" data-bk="${b.k}"><span class="leg-dot" style="background:${b.c}"></span>${b.l}</div>`).join('');
+    el.innerHTML=cfg.buckets.map(b=>`<div class="leg-item${legendFilters.has(b.k)?' active-filter':''}" data-bk="${b.k}"><span class="leg-dot" style="background:${b.c}"></span>${t(b.l,b.le||b.l)}</div>`).join('');
     attachClicks();return;
   }
   if(cfg.dynamicBuckets){
@@ -1132,7 +1177,7 @@ function drawMapMob(){
   if(!all.length){
     ctx.fillStyle='#0c2a10';ctx.fillRect(0,0,W,H);
     ctx.fillStyle='#7a9e84';ctx.font='13px monospace';ctx.textAlign='center';
-    ctx.fillText('Carga un CSV para ver datos',W/2,H/2);return;
+    ctx.fillText(t('Carga un CSV para ver datos','Load a CSV to see data'),W/2,H/2);return;
   }
   const desvs=all.map(s=>s.desv_total).filter(v=>v!=null);
   const dists=all.map(s=>s.dist_total);
@@ -1208,10 +1253,10 @@ function initMapMob(){
     tt.style.display='block';
     const dc=CLUB_COLORS[s.palo]||'#52b788';
     tt.innerHTML=`<div style="color:${dc};font-weight:600;margin-bottom:.15rem">${s.palo}</div>`+
-      `<div class="tt-row"><span class="tt-key">Dist</span><span class="tt-val">${s.dist_total.toFixed(1)}m</span></div>`+
-      `<div class="tt-row"><span class="tt-key">Lateral</span><span class="tt-val" style="color:${(s.desv_total||0)>0?'#f2994a':'#6fcf97'}">${fmtSign(s.desv_total)}m</span></div>`+
-      `<div class="tt-row"><span class="tt-key">Cara</span><span class="tt-val">${fmtSign(s.cara_palo)}°</span></div>`+
-      `<div class="tt-row"><span class="tt-key">Calidad</span><span class="tt-val">${fmt(s.calidad,3)}</span></div>`;
+      `<div class="tt-row"><span class="tt-key">${t('Dist','Dist')}</span><span class="tt-val">${s.dist_total.toFixed(1)}m</span></div>`+
+      `<div class="tt-row"><span class="tt-key">${t('Lateral','Lateral')}</span><span class="tt-val" style="color:${(s.desv_total||0)>0?'#f2994a':'#6fcf97'}">${fmtSign(s.desv_total)}m</span></div>`+
+      `<div class="tt-row"><span class="tt-key">${t('Cara','Face')}</span><span class="tt-val">${fmtSign(s.cara_palo)}°</span></div>`+
+      `<div class="tt-row"><span class="tt-key">${t('Calidad','Smash')}</span><span class="tt-val">${fmt(s.calidad,3)}</span></div>`;
   }
   canvas.addEventListener('touchstart',e=>{
     e.preventDefault();tt.style.display='none';
@@ -1224,7 +1269,7 @@ function initMapMob(){
       selectedIdx=s._origIdx===selectedIdx?null:s._origIdx;
       buildStripMob();buildLegendMob();drawMapMob();
       const cntEl=document.getElementById('shot-count-mob');
-      if(cntEl)cntEl.textContent=`${getVisibleShots().length} visibles`;
+      if(cntEl)cntEl.textContent=`${getVisibleShots().length} ${t('visibles','visible')}`;
       const activeScreen=document.querySelector('.screen.active');
       if(activeScreen&&activeScreen.id==='screen-stats')buildStatsMob();
       if(activeScreen&&activeScreen.id==='screen-shots')buildShotList();
@@ -1251,23 +1296,23 @@ function buildStatsMob(){
   if(selectedIdx!==null&&SHOTS_CURRENT[selectedIdx]){
     const s=SHOTS_CURRENT[selectedIdx];
     const clubShots=vis.filter(x=>x.palo===s.palo);
-    ALL_PARAMS.forEach(({k,l,u,d,signed})=>{
+    ALL_PARAMS.forEach(({k,l,le,u,d,signed})=>{
       const v=s[k];if(v==null)return;
       const clubAvg=avg(clubShots.map(x=>x[k]));
       const diff=clubAvg!=null?v-clubAvg:null;
       const color=signed?(v>0?'#f2994a':'#6fcf97'):'var(--gl)';
       const diffStr=diff!=null?` <span style="font-size:.42rem;color:${Math.abs(diff)<0.5?'var(--muted)':diff>0?'#6fcf97':'#f2994a'}">${diff>0?'+':''}${diff.toFixed(1)}μ</span>`:'';
       const box=document.createElement('div');box.className='stat-box';
-      box.innerHTML=`<div class="sb-val" style="color:${color}">${signed?fmtSign(v,d):fmt(v,d)}${u}</div><div class="sb-lbl">${l}${diffStr}</div>`;
+      box.innerHTML=`<div class="sb-val" style="color:${color}">${signed?fmtSign(v,d):fmt(v,d)}${u}</div><div class="sb-lbl">${t(l,le||l)}${diffStr}</div>`;
       grid.appendChild(box);
     });
   } else {
-    ALL_PARAMS.forEach(({k,l,u,d,signed})=>{
+    ALL_PARAMS.forEach(({k,l,le,u,d,signed})=>{
       const vals=vis.map(s=>s[k]).filter(v=>v!=null&&!isNaN(v));if(!vals.length)return;
       const mean=avg(vals);
       const color=signed?(mean>0?'#f2994a':'#6fcf97'):'var(--gl)';
       const box=document.createElement('div');box.className='stat-box';
-      box.innerHTML=`<div class="sb-val" style="color:${color}">${signed?fmtSign(mean,d):fmt(mean,d)}${u}</div><div class="sb-lbl">${l}</div>`;
+      box.innerHTML=`<div class="sb-val" style="color:${color}">${signed?fmtSign(mean,d):fmt(mean,d)}${u}</div><div class="sb-lbl">${t(l,le||l)}</div>`;
       grid.appendChild(box);
     });
   }
@@ -1278,7 +1323,7 @@ function buildStatsMob(){
   if(desvs.length){
     const maxAbs=Math.max(Math.abs(Math.max(...desvs)),Math.abs(Math.min(...desvs)),15);
     const lbl=document.getElementById('lat-lbl-mob');
-    if(lbl)lbl.textContent=`Lateral · μ ${fmtSign(avg(desvs))}m · ${desvs.filter(v=>v>0).length} der / ${desvs.filter(v=>v<0).length} izq`;
+    if(lbl)lbl.textContent=`${t('Lateral','Lateral')} · μ ${fmtSign(avg(desvs))}m · ${desvs.filter(v=>v>0).length} ${t('der','R')} / ${desvs.filter(v=>v<0).length} ${t('izq','L')}`;
     vis.forEach(s=>{
       if(s.desv_total==null)return;
       const origIdx=SHOTS_CURRENT.indexOf(s);const pct=50+(s.desv_total/maxAbs)*46;
@@ -1296,7 +1341,7 @@ function buildStatsMob(){
   if(det&&selectedIdx!==null&&SHOTS_CURRENT[selectedIdx]){
     const s=SHOTS_CURRENT[selectedIdx];
     det.innerHTML=`<div class="detail-panel"><div class="detail-title">${s.palo} · ${(s.fecha||'').split(' ')[1]||''}</div><div class="detail-grid">${
-      ALL_PARAMS.map(({k,l,u,d,signed})=>{const v=s[k];if(v==null)return'';const c=signed?(v>0?'#f2994a':'#6fcf97'):'var(--gl)';return`<div class="dg-item"><span class="dg-key">${l}</span><span style="color:${c}">${signed?fmtSign(v,d):fmt(v,d)}${u}</span></div>`;}).join('')
+      ALL_PARAMS.map(({k,l,le,u,d,signed})=>{const v=s[k];if(v==null)return'';const c=signed?(v>0?'#f2994a':'#6fcf97'):'var(--gl)';return`<div class="dg-item"><span class="dg-key">${t(l,le||l)}</span><span style="color:${c}">${signed?fmtSign(v,d):fmt(v,d)}${u}</span></div>`;}).join('')
     }</div></div>`;
   }else if(det)det.innerHTML='';
 }
@@ -1313,7 +1358,7 @@ function buildShotList(){
   const list=document.getElementById('shot-list');if(!list)return;
   list.innerHTML='';
   const cntEl=document.getElementById('shot-count-mob');
-  if(cntEl)cntEl.textContent=`${rows.filter(s=>!hiddenSet.has(s._origIdx)).length} visibles`;
+  if(cntEl)cntEl.textContent=`${rows.filter(s=>!hiddenSet.has(s._origIdx)).length} ${t('visibles','visible')}`;
   rows.forEach((s)=>{
     const origIdx=s._origIdx;
     const isHid=hiddenSet.has(origIdx),isSel=selectedIdx===origIdx;
@@ -1325,9 +1370,9 @@ function buildShotList(){
       <span class="si-dist">${s.dist_total.toFixed(0)}</span>
       <span style="font-family:'DM Mono',monospace;font-size:.52rem;color:${lc};width:40px;flex-shrink:0;">${fmtSign(s.desv_total)}m</span>
       <div class="si-params">
-        <span class="si-tag">cara <span style="color:${(s.cara_palo||0)>2?'#f2994a':(s.cara_palo||0)<-2?'#6fcf97':'var(--text)'}">  ${fmtSign(s.cara_palo)}°</span></span>
-        <span class="si-tag">atq <span>${fmtSign(s.angulo_ataque)}°</span></span>
-        <span class="si-tag">cal <span style="color:${(s.calidad||0)>=1.2?'#3cba54':(s.calidad||0)>=1.0?'#f2994a':'#e63946'}">${fmt(s.calidad,3)}</span></span>
+        <span class="si-tag">${t('cara','face')} <span style="color:${(s.cara_palo||0)>2?'#f2994a':(s.cara_palo||0)<-2?'#6fcf97':'var(--text)'}">  ${fmtSign(s.cara_palo)}°</span></span>
+        <span class="si-tag">${t('atq','aoa')} <span>${fmtSign(s.angulo_ataque)}°</span></span>
+        <span class="si-tag">${t('cal','smsh')} <span style="color:${(s.calidad||0)>=1.2?'#3cba54':(s.calidad||0)>=1.0?'#f2994a':'#e63946'}">${fmt(s.calidad,3)}</span></span>
       </div>
       <button class="si-hide" data-idx="${origIdx}">${isHid?'🚫':'👁'}</button>`;
     div.querySelector('.si-hide').onclick=e=>{
@@ -1347,7 +1392,7 @@ function buildShotList(){
 // SAVED FILTERS
 // ═══════════════════════════════════════════════════════════════
 function saveCurrentFilter(){
-  const name=prompt('Nombre del filtro (ej: "Punch con H7"):');
+  const name=prompt(t('Nombre del filtro (ej: "Punch con H7"):','Filter name (e.g. "Punch H7"):'));
   if(!name||!name.trim())return;
   savedFilters.push({
     id:Date.now(),name:name.trim(),
@@ -1357,7 +1402,7 @@ function saveCurrentFilter(){
   });
   saveToStorage();
   buildFilterSheet();
-  alert(`✅ Filtro "${name.trim()}" guardado`);
+  alert(`✅ ${t('Filtro','Filter')} "${name.trim()}" ${t('guardado','saved')}`);
 }
 function applyFilter(f){
   activeClub=f.club;
@@ -1373,12 +1418,16 @@ function deleteFilter(id){
 function buildFilterSheet(){
   const fp=document.getElementById('filter-content-mob');if(!fp)return;
   const params=[
-    {k:'dist_total',l:'Dist. total (m)'},{k:'desv_total',l:'Lateral (m)'},
-    {k:'vel_bola',l:'Vel. bola (m/s)'},{k:'cara_palo',l:'Cara palo (°)'},
-    {k:'calidad',l:'Calidad'},{k:'altura_max',l:'Alt. máx (m)'},
-    {k:'retroceso',l:'Backspin (rpm)'},{k:'angulo_ataque',l:'Ataque (°)'},
+    {k:'dist_total',l:t('Dist. total (m)','Total dist. (m)')},
+    {k:'desv_total',l:t('Lateral (m)','Lateral (m)')},
+    {k:'vel_bola',l:t('Vel. bola (m/s)','Ball speed (m/s)')},
+    {k:'cara_palo',l:t('Cara palo (°)','Face angle (°)')},
+    {k:'calidad',l:t('Calidad','Smash factor')},
+    {k:'altura_max',l:t('Alt. máx (m)','Max height (m)')},
+    {k:'retroceso',l:'Backspin (rpm)'},
+    {k:'angulo_ataque',l:t('Ataque (°)','Attack angle (°)')},
   ];
-  let html=`<div style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem;">Rangos de parámetros</div>`;
+  let html=`<div style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.6rem;">${t('Rangos de parámetros','Parameter ranges')}</div>`;
   html+=params.map(({k,l})=>{const cur=tableFilters[k]||{};return(
     `<div class="filter-row-m"><span class="filter-lbl-m">${l}</span>`+
     `<input class="filter-input-m" type="number" placeholder="min" data-k="${k}" data-t="min" value="${cur.min??''}">`+
@@ -1387,12 +1436,12 @@ function buildFilterSheet(){
   );}).join('');
   // Saved filters
   if(savedFilters.length){
-    html+=`<div style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:1rem 0 .5rem;">Filtros guardados</div>`;
+    html+=`<div style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:1rem 0 .5rem;">${t('Filtros guardados','Saved filters')}</div>`;
     html+=savedFilters.map(f=>`
       <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;background:rgba(82,183,136,.08);border:1px solid rgba(82,183,136,.2);border-radius:4px;padding:.4rem .6rem;">
         <span style="flex:1;font-family:'DM Mono',monospace;font-size:.65rem;color:var(--text);">${f.name}</span>
         <span style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);">${CLUB_ABBR[f.club]||f.club}</span>
-        <button onclick="applyFilter(${JSON.stringify(f).replace(/"/g,'&quot;')})" style="font-family:'DM Mono',monospace;font-size:.6rem;padding:.2rem .5rem;background:var(--gl);color:#0d1b0f;border:none;border-radius:3px;cursor:pointer;">Usar</button>
+        <button onclick="applyFilter(${JSON.stringify(f).replace(/"/g,'&quot;')})" style="font-family:'DM Mono',monospace;font-size:.6rem;padding:.2rem .5rem;background:var(--gl);color:#0d1b0f;border:none;border-radius:3px;cursor:pointer;">${t('Usar','Use')}</button>
         <button onclick="deleteFilter(${f.id})" style="font-family:'DM Mono',monospace;font-size:.6rem;padding:.2rem .4rem;background:rgba(230,57,70,.2);color:var(--red);border:none;border-radius:3px;cursor:pointer;">✕</button>
       </div>`).join('');
   }
@@ -1421,7 +1470,11 @@ function closeFilterSheet(){
 // ═══════════════════════════════════════════════════════════════
 function buildAnalysis(){
   const el=document.getElementById('analysis-content');if(!el)return;
-  const allValid=SHOTS_CURRENT.filter(s=>s.dist_total>0.5);
+  // Determine base shots: from specific session or from SHOTS_CURRENT
+  const baseShots=analysisSessionId!==null
+    ? (ALL_SESSIONS.find(s=>s.id===analysisSessionId)||{shots:[]}).shots
+    : SHOTS_CURRENT;
+  const allValid=baseShots.filter(s=>s.dist_total>0.5);
   if(!allValid.length){
     el.innerHTML=`<div style="color:var(--muted);font-family:'DM Mono',monospace;font-size:.7rem;padding:1rem;">${t('Carga una sesión CSV para ver el análisis.','Load a CSV session to see the analysis.')}</div>`;
     return;
@@ -1566,8 +1619,21 @@ function buildAnalysis(){
   ];
 
   // ── Render ──
+  // Session selector
+  const sessOpts=[
+    [t('Todas','All sessions'), null],
+    ...ALL_SESSIONS.map(s=>[s.name, s.id]),
+  ];
   let html=`
-  <div style="display:flex;gap:.4rem;overflow-x:auto;padding:.2rem 0 .6rem;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-bottom:.2rem;">
+  <div style="font-family:'DM Mono',monospace;font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.25rem;">${t('Sesión','Session')}</div>
+  <div style="display:flex;gap:.3rem;overflow-x:auto;padding:.1rem 0 .5rem;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-bottom:.4rem;">
+    ${sessOpts.map(([label,sid])=>{
+      const active=analysisSessionId===sid;
+      return`<button onclick="analysisSessionId=${JSON.stringify(sid)};buildAnalysis();" style="flex-shrink:0;font-family:'DM Mono',monospace;font-size:.58rem;padding:.28rem .65rem;border-radius:3px;border:1px solid ${active?'var(--gold)':'var(--border)'};background:${active?'rgba(233,196,106,.15)':'transparent'};color:${active?'var(--gold)':'var(--muted)'};cursor:pointer;white-space:nowrap;">${label}</button>`;
+    }).join('')}
+  </div>
+  <div style="font-family:'DM Mono',monospace;font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.25rem;">${t('Palo','Club')}</div>
+  <div style="display:flex;gap:.4rem;overflow-x:auto;padding:.1rem 0 .5rem;scrollbar-width:none;-webkit-overflow-scrolling:touch;margin-bottom:.4rem;">
     ${filterOpts.map(([label,val])=>{
       const active=(analysisClubFilter===val)||(analysisClubFilter==='Todos'&&val==='Todos')||(analysisClubFilter==='All'&&val==='Todos');
       return`<button onclick="analysisClubFilter='${val}';buildAnalysis();" style="flex-shrink:0;font-family:'DM Mono',monospace;font-size:.58rem;padding:.28rem .65rem;border-radius:3px;border:1px solid ${active?'var(--gl)':'var(--border)'};background:${active?'var(--gl)':'transparent'};color:${active?'#0d1b0f':'var(--muted)'};cursor:pointer;white-space:nowrap;">${label}</button>`;
@@ -1647,7 +1713,7 @@ function buildProgress(){
     const vals=sess.shots.filter(s=>s[progressMetric]!=null&&s.dist_total>0.5).map(s=>s[progressMetric]);
     return{name:sess.name,date:sess.date,val:avg(vals),n:vals.length};
   }).filter(p=>p.val!=null);
-  if(!points.length){el.innerHTML='<div style="color:var(--muted);font-family:\'DM Mono\',monospace;font-size:.7rem;padding:1rem;">Sin datos para esta métrica.</div>';return;}
+  if(!points.length){el.innerHTML=`<div style="color:var(--muted);font-family:'DM Mono',monospace;font-size:.7rem;padding:1rem;">${t('Sin datos para esta métrica.','No data for this metric.')}</div>`;return;}
 
   // Draw chart
   const W=el.offsetWidth||320;const H=180;
@@ -1666,10 +1732,10 @@ function buildProgress(){
   const pct=Math.abs(change/first*100);
   const improved=cfg.signed?(Math.abs(last)<Math.abs(first)):(last>first);
   let explanation='';
-  if(cfg.k==='dist_total') explanation=improved?`Tu distancia media ha ${change>0?'aumentado':'disminuido'} ${Math.abs(change).toFixed(1)}m (${pct.toFixed(1)}%) desde la primera sesión. ${change>0?'Buen progreso — el aumento de distancia suele venir de mayor velocidad de palo o mejor calidad de impacto.':'Una ligera reducción puede ser normal si estás trabajando en precisión.'}`:explanation;
-  if(cfg.k==='calidad') explanation=improved?`Tu calidad de impacto ha mejorado ${Math.abs(change).toFixed(3)} puntos. Esto significa que transfieres más velocidad al a bola por cada unidad de velocidad de palo — tu contacto es más sólido.`:`La calidad de impacto ha bajado ${Math.abs(change).toFixed(3)} puntos. Puede indicar fatiga, cambio técnico, o condiciones de práctica distintas.`;
-  if(cfg.k==='desv_total') explanation=Math.abs(last)<Math.abs(first)?`Tu desviación lateral media se ha reducido ${Math.abs(change).toFixed(1)}m. Estás enviando la bola más cerca del objetivo — mejora clara en precisión.`:`La desviación lateral ha aumentado ${Math.abs(change).toFixed(1)}m. Revisa la pestaña Análisis para ver qué está causando la desviación.`;
-  if(cfg.k==='cara_palo') explanation=Math.abs(last)<Math.abs(first)?`La cara del palo está más cuadrada (${Math.abs(change).toFixed(2)}° de mejora). Menos curvatura lateral en las bolas.`:`La cara se está abriendo/cerrando más (${Math.abs(change).toFixed(2)}° de diferencia). Revisa el grip entre sesiones.`;
+  if(cfg.k==='dist_total') explanation=improved?t(`Tu distancia media ha ${change>0?'aumentado':'disminuido'} ${Math.abs(change).toFixed(1)}m (${pct.toFixed(1)}%) desde la primera sesión. ${change>0?'Buen progreso — el aumento de distancia suele venir de mayor velocidad de palo o mejor calidad de impacto.':'Una ligera reducción puede ser normal si estás trabajando en precisión.'}`,`Your average distance has ${change>0?'increased':'decreased'} ${Math.abs(change).toFixed(1)}m (${pct.toFixed(1)}%) since the first session. ${change>0?'Good progress — distance gains usually come from higher club speed or better smash factor.':'A slight reduction can be normal if you\'re working on precision.'}`):explanation;
+  if(cfg.k==='calidad') explanation=improved?t(`Tu calidad de impacto ha mejorado ${Math.abs(change).toFixed(3)} puntos. Esto significa que transfieres más velocidad a la bola por cada unidad de velocidad de palo — tu contacto es más sólido.`,`Your smash factor improved by ${Math.abs(change).toFixed(3)}. You\'re transferring more speed to the ball per unit of club speed — your contact is more solid.`):t(`La calidad de impacto ha bajado ${Math.abs(change).toFixed(3)} puntos. Puede indicar fatiga, cambio técnico, o condiciones de práctica distintas.`,`Smash factor dropped ${Math.abs(change).toFixed(3)} points. May indicate fatigue, a technical change, or different practice conditions.`);
+  if(cfg.k==='desv_total') explanation=Math.abs(last)<Math.abs(first)?t(`Tu desviación lateral media se ha reducido ${Math.abs(change).toFixed(1)}m. Estás enviando la bola más cerca del objetivo — mejora clara en precisión.`,`Your average lateral deviation decreased by ${Math.abs(change).toFixed(1)}m. You\'re hitting closer to the target line — clear precision improvement.`):t(`La desviación lateral ha aumentado ${Math.abs(change).toFixed(1)}m. Revisa la pestaña Análisis para ver qué está causando la desviación.`,`Lateral deviation increased ${Math.abs(change).toFixed(1)}m. Check the Analysis tab to see what\'s causing the drift.`);
+  if(cfg.k==='cara_palo') explanation=Math.abs(last)<Math.abs(first)?t(`La cara del palo está más cuadrada (${Math.abs(change).toFixed(2)}° de mejora). Menos curvatura lateral en las bolas.`,`Face angle is squarer at impact (${Math.abs(change).toFixed(2)}° improvement). Less lateral curve on shots.`):t(`La cara se está abriendo/cerrando más (${Math.abs(change).toFixed(2)}° de diferencia). Revisa el grip entre sesiones.`,`Face is opening/closing more (${Math.abs(change).toFixed(2)}° difference). Check your grip between sessions.`);
   if(!explanation) explanation=t(
     `Valor en primera sesión: ${fmt(first,2)}${cfg.u||''} → Última sesión: ${fmt(last,2)}${cfg.u||''}. Tendencia: ${improved?'✅ mejorando':'⚠ a trabajar'}.`,
     `First session: ${fmt(first,2)}${cfg.u||''} → Latest session: ${fmt(last,2)}${cfg.u||''}. Trend: ${improved?'✅ improving':'⚠ needs work'}.`
@@ -1723,7 +1789,7 @@ function buildProgress(){
     });
     if(points.length<2){
       ctx.fillStyle='#7a9e84';ctx.font='11px monospace';ctx.textAlign='center';
-      ctx.fillText('Necesitas más sesiones',W/2,H/2);return;
+      ctx.fillText(t('Necesitas más sesiones','Need more sessions'),W/2,H/2);return;
     }
     // Area fill
     ctx.beginPath();ctx.moveTo(toX(0),toY(points[0].val));
@@ -1750,16 +1816,38 @@ function buildProgress(){
 // ═══════════════════════════════════════════════════════════════
 function buildDataScreen(){
   const el=document.getElementById('sessions-list');if(!el)return;
-  if(!ALL_SESSIONS.length){el.innerHTML='<div style="color:var(--muted);font-family:\'DM Mono\',monospace;font-size:.65rem;">Sin sesiones guardadas aún.</div>';return;}
-  el.innerHTML=ALL_SESSIONS.map((sess,i)=>`
-    <div style="display:flex;align-items:center;gap:.5rem;padding:.5rem .6rem;background:${i===ALL_SESSIONS.length-1?'rgba(82,183,136,.08)':'var(--card)'};border:1px solid ${i===ALL_SESSIONS.length-1?'rgba(82,183,136,.3)':'var(--border)'};border-radius:4px;margin-bottom:.4rem;">
-      <div style="flex:1;">
-        <div style="font-family:'DM Mono',monospace;font-size:.65rem;color:var(--text);">${sess.name}</div>
-        <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);">${sess.date} · ${sess.shots.length} golpes · ${[...new Set(sess.shots.map(s=>CLUB_ABBR[s.palo]||s.palo))].join(', ')}</div>
+  if(!ALL_SESSIONS.length){
+    el.innerHTML=`<div style="color:var(--muted);font-family:'DM Mono',monospace;font-size:.65rem;">${t('Sin sesiones guardadas aún.','No sessions saved yet.')}</div>`;
+    return;
+  }
+  const isAllActive=viewSessionId===null&&!showOnlyLastSession;
+  const totalShots=ALL_SESSIONS.flatMap(s=>s.shots).length;
+  let html=`<button onclick="viewSessionId=null;showOnlyLastSession=false;applySessionData();buildDataScreen();render();"
+    style="width:100%;text-align:left;font-family:'DM Mono',monospace;font-size:.65rem;padding:.4rem .6rem;
+    background:${isAllActive?'rgba(82,183,136,.18)':'transparent'};
+    border:1px solid ${isAllActive?'var(--gl)':'var(--border)'};
+    border-radius:4px;margin-bottom:.4rem;
+    color:${isAllActive?'var(--gl)':'var(--muted)'};cursor:pointer;">
+    ${isAllActive?'●':'○'} ${t('Todas las sesiones','All sessions')} · ${totalShots} ${t('golpes','shots')}
+  </button>`;
+  html+=ALL_SESSIONS.map((sess,i)=>{
+    const isLast=i===ALL_SESSIONS.length-1;
+    const isActive=viewSessionId===sess.id;
+    const clubs=[...new Set(sess.shots.map(s=>CLUB_ABBR[s.palo]||s.palo))].join(', ');
+    return`<div style="display:flex;align-items:center;gap:.5rem;padding:.5rem .6rem;
+      background:${isActive?'rgba(82,183,136,.18)':isLast?'rgba(82,183,136,.05)':'var(--card)'};
+      border:1px solid ${isActive?'var(--gl)':isLast?'rgba(82,183,136,.3)':'var(--border)'};
+      border-radius:4px;margin-bottom:.4rem;">
+      <div style="flex:1;cursor:pointer;" onclick="viewSessionId=${sess.id};showOnlyLastSession=false;applySessionData();buildDataScreen();render();">
+        <div style="font-family:'DM Mono',monospace;font-size:.65rem;color:${isActive?'var(--gl)':'var(--text)'};">${isActive?'● ':''} ${sess.name}</div>
+        <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);">${sess.date} · ${sess.shots.length} ${t('golpes','shots')} · ${clubs}</div>
       </div>
-      ${i===ALL_SESSIONS.length-1?'<span style="font-family:\'DM Mono\',monospace;font-size:.5rem;color:var(--gl);padding:.15rem .4rem;background:rgba(82,183,136,.15);border-radius:2px;">ÚLTIMA</span>':''}
-      <button onclick="deleteSession(${sess.id});buildDataScreen();applySessionData();render();" style="font-family:'DM Mono',monospace;font-size:.6rem;padding:.2rem .4rem;background:rgba(230,57,70,.15);color:var(--red);border:none;border-radius:3px;cursor:pointer;">✕</button>
-    </div>`).join('');
+      ${isLast&&!isActive?`<span style="font-family:'DM Mono',monospace;font-size:.5rem;color:var(--gl);padding:.15rem .4rem;background:rgba(82,183,136,.15);border-radius:2px;">${t('ÚLTIMA','LAST')}</span>`:''}
+      <button onclick="event.stopPropagation();if(viewSessionId===${sess.id})viewSessionId=null;if(analysisSessionId===${sess.id})analysisSessionId=null;deleteSession(${sess.id});buildDataScreen();applySessionData();render();"
+        style="font-family:'DM Mono',monospace;font-size:.6rem;padding:.2rem .4rem;background:rgba(230,57,70,.15);color:var(--red);border:none;border-radius:3px;cursor:pointer;">✕</button>
+    </div>`;
+  }).join('');
+  el.innerHTML=html;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1775,16 +1863,16 @@ function initCSVLoader(){
       const statusEl=document.getElementById('upload-status-mob');
       if(parsed.length>0){
         // Auto-name from file or date
-        const autoName=file.name.replace('.csv','').replace(/_/g,' ')||`Sesión ${new Date().toLocaleDateString('es-ES')}`;
+        const autoName=file.name.replace('.csv','').replace(/_/g,' ')||`${t('Sesión','Session')} ${new Date().toLocaleDateString('es-ES')}`;
         addSession(parsed,autoName);
-        if(statusEl)statusEl.textContent=`✅ ${file.name} · ${parsed.length} golpes · ${ALL_SESSIONS.length} sesiones guardadas`;
+        if(statusEl)statusEl.textContent=`✅ ${file.name} · ${parsed.length} ${t('golpes','shots')} · ${ALL_SESSIONS.length} ${t('sesiones guardadas','sessions saved')}`;
         hiddenSet=new Set();selectedIdx=null;legendFilters=new Set();tableFilters={};
         buildDataScreen();render();
       } else {
-        if(statusEl)statusEl.textContent='⚠ Sin datos válidos en el CSV.';
+        if(statusEl)statusEl.textContent=t('⚠ Sin datos válidos en el CSV.','⚠ No valid data in CSV.');
       }
     };
-    reader.onerror=()=>{const s=document.getElementById('upload-status-mob');if(s)s.textContent='⚠ Error al leer el fichero.';};
+    reader.onerror=()=>{const s=document.getElementById('upload-status-mob');if(s)s.textContent=t('⚠ Error al leer el fichero.','⚠ Error reading file.');};
     reader.readAsText(file,'utf-8');
   };
 }
@@ -1806,7 +1894,9 @@ function showScreen(id,tab){
 }
 function resetAll(){
   hiddenSet=new Set();selectedIdx=null;legendFilters=new Set();tableFilters={};
-  sortKey='';sortDir=1;activeClub='Todos';render();
+  sortKey='';sortDir=1;activeClub='Todos';
+  const sortSel=document.getElementById('sort-mob');if(sortSel)sortSel.value='';
+  render();
 }
 function render(){
   buildStripMob();
@@ -1820,7 +1910,7 @@ function render(){
   if(activeId==='screen-progress')buildProgress();
   if(activeId==='screen-data')buildDataScreen();
   const cntEl=document.getElementById('shot-count-mob');
-  if(cntEl)cntEl.textContent=`${getVisibleShots().length} visibles`;
+  if(cntEl)cntEl.textContent=`${getVisibleShots().length} ${t('visibles','visible')}`;
 }
 
 // ═══════════════════════════════════════════════════════════════
