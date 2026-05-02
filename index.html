@@ -324,6 +324,9 @@ canvas{display:block;width:100%;touch-action:none;}
   <div class="nav-tab" data-screen="screen-data" onclick="showScreen('screen-data',this)">📂 Datos</div>
 </div>
 
+<!-- SESSION BAR — always visible in all tabs -->
+<div id="session-bar" style="display:flex;gap:.3rem;padding:.35rem .7rem;overflow-x:auto;-webkit-overflow-scrolling:touch;background:#0a1508;border-bottom:1px solid var(--border);flex-shrink:0;scrollbar-width:none;"></div>
+
 <!-- CAMPO -->
 <div class="screen active" id="screen-map">
   <div class="strip" id="strip-mob"></div>
@@ -1073,11 +1076,32 @@ function getAllFiltered(){
 function getShotColor(s,all){
   const cfg=COLOR_CONFIG[colorBy]||COLOR_CONFIG.calidad;
   const v=s[colorBy];if(v==null)return'#556b5a';
-  if(cfg.buckets&&!cfg.dynamicBuckets)return cfg.fn(v);
+  if(cfg.buckets&&!cfg.dynamicBuckets){const b=cfg.buckets.find(b=>b.test(v));return b?b.c:cfg.fn(v);}
   if(cfg.dynamicBuckets&&cfg._dynMn!=null)return cfg.fn(v,cfg._dynMn,cfg._dynMx);
   const vals=all.map(x=>x[colorBy]).filter(x=>x!=null);
   if(!vals.length)return'#556b5a';
   return cfg.fn(v,Math.min(...vals),Math.max(...vals));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// SESSION BAR
+// ═══════════════════════════════════════════════════════════════
+function buildSessionBar(){
+  const bar=document.getElementById('session-bar');if(!bar)return;
+  if(!ALL_SESSIONS.length){bar.style.display='none';return;}
+  bar.style.display='flex';
+  const make=(label,id,col)=>{
+    const b=document.createElement('button');
+    b.style.cssText='flex-shrink:0;font-family:"DM Mono",monospace;font-size:.58rem;padding:.22rem .6rem;border-radius:3px;border:1px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;white-space:nowrap;';
+    const active=id===null?viewSessionId===null:viewSessionId===id;
+    if(active){b.style.background=col||'var(--gl)';b.style.color='#0d1b0f';b.style.borderColor='transparent';}
+    b.textContent=label;
+    b.onclick=()=>{viewSessionId=id;applySessionData();render();};
+    bar.appendChild(b);
+  };
+  bar.innerHTML='';
+  make(t('Todas','All'),null,null);
+  ALL_SESSIONS.forEach((s,i)=>make(s.name||`${t('Sesión','Session')} ${i+1}`,s.id,'var(--gold)'));
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1899,6 +1923,7 @@ function resetAll(){
   render();
 }
 function render(){
+  buildSessionBar();
   buildStripMob();
   buildTabsMob('tabs-mob');buildTabsMob('tabs-stats');
   buildLegendMob();drawMapMob();
