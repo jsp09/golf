@@ -1077,10 +1077,8 @@ function getShotColor(s,all){
   const cfg=COLOR_CONFIG[colorBy]||COLOR_CONFIG.calidad;
   const v=s[colorBy];if(v==null)return'#556b5a';
   if(cfg.buckets&&!cfg.dynamicBuckets){const b=cfg.buckets.find(b=>b.test(v));return b?b.c:cfg.fn(v);}
+  if(cfg.dynamicBuckets&&cfg._dynBuckets){const b=cfg._dynBuckets.find(b=>b.test(v));return b?b.c:(cfg._dynMn!=null?cfg.fn(v,cfg._dynMn,cfg._dynMx):'#556b5a');}
   if(cfg.dynamicBuckets&&cfg._dynMn!=null)return cfg.fn(v,cfg._dynMn,cfg._dynMx);
-  const vals=all.map(x=>x[colorBy]).filter(x=>x!=null);
-  if(!vals.length)return'#556b5a';
-  return cfg.fn(v,Math.min(...vals),Math.max(...vals));
 }
 
 // ═══════════════════════════════════════════════════════════════
