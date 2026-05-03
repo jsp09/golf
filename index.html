@@ -988,6 +988,155 @@ const DRILLS = {
       {name:'Full setup check',desc:'Knees slightly flexed, tilt from the hips (not the waist), arms hanging naturally, weight evenly distributed.',freq:'Every session',clubs:'All'},
     ],
   },
+  // VARIABLE TRAJECTORY HEIGHT
+  altura_variable:{
+    es:[
+      {name:'Un swing, una altura',desc:'Elige UNA altura objetivo antes de cada golpe (alta, media, baja). Ejecuta el swing para esa altura. La intención específica reduce la varianza.',freq:'Cada golpe',clubs:'Todos'},
+      {name:'Bola de espuma en aro',desc:'Coloca un aro de hula hoop colgado a 8m de altura y 20m de distancia. El objetivo es pasar por el aro. Entrena consistencia de trayectoria.',freq:'20 bolas',clubs:'H8, H9'},
+      {name:'Angulo de ataque fijo',desc:'Varianza en altura_max suele venir de varianza en angulo_ataque. Trabaja el divot después de la bola: si el divot varía de tamaño, el ángulo varía.',freq:'15 bolas',clubs:'Hierros'},
+      {name:'Shaft lean constante',desc:'Coloca las manos en la misma posición relativa a la bola en cada address. Usa marcas visuales. La posición de manos fija el loft efectivo y por tanto la altura.',freq:'Check cada sesión',clubs:'Todos'},
+      {name:'Video trayectoria',desc:'Grábate de lado con el móvil y observa la trayectoria de las últimas 5 bolas. Si varía mucho en altura, el punto de contacto está cambiando.',freq:'1 vez por semana',clubs:'Todos'},
+    ],
+    en:[
+      {name:'One swing, one height',desc:'Choose ONE target height before each shot (high, medium, low). Execute the swing for that height. Specific intention reduces variance.',freq:'Every shot',clubs:'All'},
+      {name:'Foam ball through hoop',desc:'Hang a hula hoop at 8m height and 20m distance. The goal is to pass through the hoop. Trains trajectory consistency.',freq:'20 balls',clubs:'H8, H9'},
+      {name:'Fixed attack angle',desc:'Height variance usually comes from attack angle variance. Work on divot position: if divot size varies, your angle is changing.',freq:'15 balls',clubs:'Irons'},
+      {name:'Constant shaft lean',desc:'Set your hands in the same relative position to the ball at every address. Use visual markers. Fixed hand position locks effective loft and therefore height.',freq:'Check every session',clubs:'All'},
+      {name:'Trajectory video',desc:'Record yourself from the side and observe the last 5 ball trajectories. If height varies a lot, your contact point is shifting.',freq:'Once a week',clubs:'All'},
+    ],
+  },
+  // LOW CARRY RATIO (ball running too much → low spin / low launch)
+  carry_bajo:{
+    es:[
+      {name:'Confirmación de divot',desc:'Con hierros, el divot debe apuntar al target y aparecer después de la posición de la bola. Sin divot o muy pequeño = bajo spin.',freq:'Cada sesión',clubs:'Hierros'},
+      {name:'Cara limpia siempre',desc:'Una cara sucia reduce el spin hasta un 30-40%. Limpia la cara entre cada golpe, especialmente con hierba.',freq:'Cada golpe',clubs:'Todos'},
+      {name:'Bolas de alto spin',desc:'Las pelotas de 2 capas generan mucho menos spin que las de 3 capas (uretano). Si usas pelotas económicas, el carry se reduce.',freq:'Cambio permanente',clubs:'Todos'},
+      {name:'Ángulo de lanzamiento objetivo',desc:'Si el carry es bajo, el lanzamiento probablemente también lo es. Trabaja el launch angle: manos solo ligeramente adelante de la bola.',freq:'Check cada sesión',clubs:'H6, H7, H8'},
+      {name:'Velocidad de cabeza',desc:'Más velocidad = más spin y más carry. A velocidades muy bajas el spin cae por debajo del mínimo para sostener la bola en el aire.',freq:'Trabajo de velocidad 2x semana',clubs:'Todos'},
+    ],
+    en:[
+      {name:'Divot confirmation',desc:'With irons, the divot must point at the target and appear after the ball position. No divot or a very small one = low spin.',freq:'Every session',clubs:'Irons'},
+      {name:'Clean face always',desc:'A dirty face reduces spin by 30-40%. Clean the face between every shot, especially when there is grass.',freq:'Every shot',clubs:'All'},
+      {name:'High-spin balls',desc:'2-piece balls generate much less spin than 3-piece urethane balls. If using budget balls, carry distance drops.',freq:'Permanent change',clubs:'All'},
+      {name:'Target launch angle',desc:'If carry is low, launch is probably low too. Work on launch: hands only slightly forward of the ball at address.',freq:'Check every session',clubs:'H6, H7, H8'},
+      {name:'Head speed',desc:'More speed = more spin and more carry. At very low speeds, spin falls below the minimum needed to keep the ball airborne.',freq:'Speed work 2x/week',clubs:'All'},
+    ],
+  },
+  // HIGH CARRY RATIO (ball barely rolls → excessive spin / too high trajectory)
+  carry_alto:{
+    es:[
+      {name:'Swing al 75%',desc:'Al 75% de velocidad la bola mantiene vuelo razonable pero el spin disminuye. Muchos jugadores aumentan el spin intentando pegar "más fuerte".',freq:'15 bolas',clubs:'Todos'},
+      {name:'Bola más atrás en stance',desc:'Mueve la bola 2 cm hacia el pie derecho. Reduce el loft efectivo, baja el spin y favorece un vuelo más penetrante.',freq:'Ajuste permanente',clubs:'H6, H7'},
+      {name:'Shaft lean consciente',desc:'Las manos delante de la bola en impacto reducen el loft efectivo. El objetivo es comprimir la bola, no "levantarla".',freq:'5 min frente a espejo',clubs:'Todos los hierros'},
+      {name:'Pelotas de menos spin',desc:'Si el spin es estructuralmente alto, prueba con pelotas de 2 piezas (distance balls) que generen menos spin de partida.',freq:'1 sesión de prueba',clubs:'Todos'},
+    ],
+    en:[
+      {name:'Swing at 75%',desc:'At 75% speed the ball maintains reasonable flight but spin drops. Many players increase spin by trying to hit harder.',freq:'15 balls',clubs:'All'},
+      {name:'Ball back in stance',desc:'Move the ball 2 cm toward the right foot. Reduces effective loft, lowers spin, and promotes a more penetrating flight.',freq:'Permanent adjustment',clubs:'H6, H7'},
+      {name:'Conscious shaft lean',desc:'Hands ahead of the ball at impact reduce effective loft. The goal is to compress the ball, not to lift it.',freq:'5 min in mirror',clubs:'All irons'},
+      {name:'Low-spin balls',desc:'If spin is structurally high, try 2-piece distance balls that start with less spin.',freq:'1 test session',clubs:'All'},
+    ],
+  },
+  // FACE ANGLE HIGH VARIANCE (unpredictable face → random ball flights)
+  cara_variable:{
+    es:[
+      {name:'Grip pressure constante',desc:'Un grip inconsistente es la causa más frecuente de cara variable. 5/10 en ambas manos, sin apretar en el backswing ni en el downswing.',freq:'Cada golpe',clubs:'Todos'},
+      {name:'Bow vs cup check',desc:'La muñeca izquierda en el top determina la cara. Frente al espejo, lleva el palo al top y observa: ¿la muñeca varía de posición golpe a golpe?',freq:'5 min en casa',clubs:'Todos'},
+      {name:'Half-shot check face',desc:'Haz swings de 9h a 3h. En la posición de 3h, el filo de la cara debe apuntar al suelo o ligeramente arriba. Si varía mucho, el release es inconsistente.',freq:'10 bolas lentas',clubs:'H8, H9'},
+      {name:'Impact bag sin mirar',desc:'Golpea el impact bag cerrando los ojos. Siente la posición de cara en el impacto. Identifica si la sensación varía mucho entre golpes.',freq:'15 golpes',clubs:'Todos'},
+      {name:'Un solo pensamiento',desc:'En el downswing, ten solo UN pensamiento técnico. Múltiples pensamientos técnicos interrumpen el automatismo y hacen la cara variable.',freq:'Cada sesión',clubs:'Todos'},
+    ],
+    en:[
+      {name:'Constant grip pressure',desc:'Inconsistent grip is the most common cause of face variance. 5/10 in both hands — don\'t squeeze in backswing or downswing.',freq:'Every shot',clubs:'All'},
+      {name:'Bow vs cup check',desc:'The left wrist at the top determines face angle. In a mirror, take the club to the top: does the wrist position vary shot to shot?',freq:'5 min at home',clubs:'All'},
+      {name:'Half-shot face check',desc:'Hit 9-to-3 swings. At the 3 o\'clock position, the leading edge should point to the ground or slightly up. If it varies a lot, the release is inconsistent.',freq:'10 slow balls',clubs:'H8, H9'},
+      {name:'Impact bag eyes closed',desc:'Hit the impact bag with your eyes closed. Feel the face position at impact. Notice if the sensation varies significantly between shots.',freq:'15 shots',clubs:'All'},
+      {name:'One thought only',desc:'In the downswing, have only ONE technical thought. Multiple technical thoughts break automaticity and make face angle variable.',freq:'Every session',clubs:'All'},
+    ],
+  },
+  // PATH HIGH VARIANCE (inconsistent swing direction → sometimes slice, sometimes hook)
+  path_variable:{
+    es:[
+      {name:'Alignment stick en el suelo',desc:'Stick paralelo al target en los pies. En cada golpe, el swing debe pasar paralelo al stick. La vara da feedback visual inmediato si el camino varía.',freq:'20 bolas por sesión',clubs:'Todos'},
+      {name:'Gate drill',desc:'Coloca dos tees en el suelo formando una "puerta" por donde debe pasar la cabeza del palo al impacto. La puerta exige un camino consistente.',freq:'15 bolas',clubs:'H8, H9'},
+      {name:'Mismo campo a cada swing',desc:'La varianza de camino suele venir de un takeaway inconsistente. Grábate de cara (face-on view) y analiza si el palo sale siempre por la misma trayectoria.',freq:'1 vez por semana',clubs:'Todos'},
+      {name:'9 a 3 de la misma manera',desc:'Haz 20 medios swings muy lentos buscando que el palo pase exactamente por el mismo sitio en cada uno. El camino consistente se entrena a baja velocidad.',freq:'20 repeticiones',clubs:'Todos'},
+      {name:'Pressure shift drill',desc:'Un peso que se desplaza demasiado tarde o demasiado pronto cambia el camino del palo. Practica el traslado de peso con un swing muy lento: presión izquierda antes de que el palo baje.',freq:'15 bolas',clubs:'Todos'},
+    ],
+    en:[
+      {name:'Alignment stick on ground',desc:'Stick parallel to the target at your feet. Each swing should pass parallel to the stick. The rod gives immediate visual feedback if path varies.',freq:'20 balls/session',clubs:'All'},
+      {name:'Gate drill',desc:'Place two tees on the ground forming a "gate" for the clubhead to pass through at impact. The gate demands a consistent path.',freq:'15 balls',clubs:'H8, H9'},
+      {name:'Same slot every swing',desc:'Path variance usually comes from an inconsistent takeaway. Record yourself face-on and check if the club always exits on the same trajectory.',freq:'Once a week',clubs:'All'},
+      {name:'9-to-3 same way',desc:'Hit 20 half swings very slowly, aiming for the club to pass through exactly the same spot every time. Consistent path is trained at low speed.',freq:'20 reps',clubs:'All'},
+      {name:'Pressure shift drill',desc:'A weight shift that is too late or too early changes the club path. Practice weight transfer with a very slow swing: left pressure before the club starts down.',freq:'15 balls',clubs:'All'},
+    ],
+  },
+  // FAT / THIN SHOTS (high % of outlier short shots)
+  strike_pobre:{
+    es:[
+      {name:'Tee en el suelo delante',desc:'Clava un tee en el suelo 3 cm por delante de la bola. El objetivo es golpear la bola Y luego el tee (divot después de la bola). Si solo tocas el tee o la bola, el strike está desplazado.',freq:'20 bolas',clubs:'Hierros'},
+      {name:'Cabeza quieta',desc:'La cabeza que se mueve lateralmente en el downswing es la causa más común de contactos gordos. Practica con la cabeza "clavada" hasta después del impacto.',freq:'15 bolas',clubs:'Todos'},
+      {name:'Peso a la izquierda',desc:'60% del peso en el pie izquierdo al address. Peso demasiado a la derecha en el impacto = golpes gordos frecuentes.',freq:'Cada golpe',clubs:'Todos'},
+      {name:'Ball-turf contact drill',desc:'Practica sobre hierba natural (no mat). La hierba revela si golpeas antes o después de la bola. Los mats ocultan los golpes gordos.',freq:'1 sesión a la semana',clubs:'Hierros'},
+      {name:'Bola en superficie inclinada',desc:'Practica con la bola en un lie ligeramente downhill. Obliga a atacar más hacia abajo y evita el "scoop" que causa golpes gordos.',freq:'10 bolas',clubs:'H7, H8, H9'},
+      {name:'Grip pressure en downswing',desc:'El grip se aprieta involuntariamente en el downswing y desacelera la cabeza. Mantén presión 5/10 constante desde el top hasta el finish.',freq:'15 bolas',clubs:'Todos'},
+    ],
+    en:[
+      {name:'Tee in front',desc:'Stick a tee in the ground 3cm in front of the ball. The goal is to hit the ball AND then the tee (divot after the ball). If you only hit the tee or the ball alone, the strike is off.',freq:'20 balls',clubs:'Irons'},
+      {name:'Head still',desc:'A head that moves laterally in the downswing is the most common cause of fat shots. Practice keeping your head fixed until after impact.',freq:'15 balls',clubs:'All'},
+      {name:'Weight left',desc:'60% weight on the left foot at address. Too much weight on the right at impact = frequent fat shots.',freq:'Every shot',clubs:'All'},
+      {name:'Ball-turf contact drill',desc:'Practice on real grass (not a mat). Grass reveals whether you hit before or after the ball. Mats hide fat shots.',freq:'1 session/week',clubs:'Irons'},
+      {name:'Downhill lie drill',desc:'Practice with the ball on a slightly downhill lie. Forces a more descending attack and prevents the scoop that causes fat shots.',freq:'10 balls',clubs:'H7, H8, H9'},
+      {name:'Grip pressure in downswing',desc:'Grip involuntarily tightens in the downswing and decelerates the head. Maintain 5/10 pressure constantly from the top to the finish.',freq:'15 balls',clubs:'All'},
+    ],
+  },
+  // DOUBLE CROSS (path and face pointing opposite directions → unpredictable)
+  doble_cross:{
+    es:[
+      {name:'Simplifica el impacto',desc:'El doble cross ocurre cuando corriges una mala técnica con otra. La solución es simplificar: elige UN objetivo de cara O de camino, no los dos a la vez.',freq:'Por prioridad',clubs:'Todos'},
+      {name:'Cara cuadrada al camino',desc:'En lugar de pensar en dónde va la bola, piensa en que la cara apunte al camino. La bola irá recto si cara=camino, independientemente del objetivo.',freq:'20 bolas',clubs:'Todos'},
+      {name:'Swing más corto',desc:'Un swing de 3/4 reduce la velocidad y la cantidad de compensaciones. A velocidad reducida es más fácil mantener cara y camino coherentes.',freq:'15 bolas',clubs:'H8, H9, PW'},
+      {name:'No apuntar a la bandera',desc:'Si la curva es impredecible, apunta a un punto grande (calle entera). Reduce la presión y permite que el swing sea más natural y consistente.',freq:'Siempre en campo',clubs:'Todos'},
+    ],
+    en:[
+      {name:'Simplify impact',desc:'Double cross occurs when you correct bad technique with another bad technique. The solution: pick ONE goal — face OR path — not both at once.',freq:'By priority',clubs:'All'},
+      {name:'Face square to path',desc:'Instead of thinking about where the ball goes, think about face pointing at path. The ball goes straight when face=path, regardless of aim.',freq:'20 balls',clubs:'All'},
+      {name:'Shorter swing',desc:'A 3/4 swing reduces speed and the number of compensations. At lower speed it\'s easier to keep face and path consistent.',freq:'15 balls',clubs:'H8, H9, PW'},
+      {name:'Don\'t aim at the flag',desc:'If the curve is unpredictable, aim at a large target (whole fairway). Reduces pressure and lets the swing be more natural and consistent.',freq:'Always on course',clubs:'All'},
+    ],
+  },
+  // INCONSISTENT SIDESPIN (sometimes draw, sometimes fade)
+  efecto_inconsistente:{
+    es:[
+      {name:'Cara-camino estable',desc:'La varianza de efecto_lat viene de la varianza de cara-camino. Si unos golpes son draw y otros fade, la relación cara/camino cambia demasiado. Trabaja primero la consistencia de cara y camino.',freq:'Por prioridad',clubs:'Todos'},
+      {name:'Swing pensado en la dirección',desc:'Visualiza la curva antes del golpe. Si intentas un draw pero ejecutas un fade, la discrepancia revela falta de control en el release.',freq:'Cada golpe',clubs:'Todos'},
+      {name:'Series de 5 del mismo tipo',desc:'Haz series de 5 golpes con la misma curva intencional (5 draws, luego 5 fades). Identifica cuál es más fácil de repetir. Esa es tu bola de juego.',freq:'20 bolas por tipo',clubs:'H7, H8'},
+      {name:'Grip check constante',desc:'Un grip que varía de posición entre golpes es la fuente más común de efecto lateral inconsistente. Comprueba el grip antes de cada golpe.',freq:'Antes de cada golpe',clubs:'Todos'},
+      {name:'Forearm rotation timing',desc:'El momento en que rotan los antebrazos determina el efecto. Si rota muy pronto = hook/draw. Muy tarde = fade/slice. Busca el timing consistente.',freq:'20 repeticiones sin bola',clubs:'Todos'},
+    ],
+    en:[
+      {name:'Stable face-path',desc:'Sidespin variance comes from face-to-path variance. If some shots are draws and others fades, the face/path relationship is changing too much. Work on face and path consistency first.',freq:'By priority',clubs:'All'},
+      {name:'Intentional curve',desc:'Visualize the ball curve before the shot. If you intend a draw but execute a fade, the discrepancy reveals lack of release control.',freq:'Every shot',clubs:'All'},
+      {name:'Sets of 5 same type',desc:'Hit sets of 5 shots with the same intentional curve (5 draws, then 5 fades). Identify which is easier to repeat. That\'s your go-to shot shape.',freq:'20 balls per type',clubs:'H7, H8'},
+      {name:'Consistent grip check',desc:'A grip that varies in position between shots is the most common source of inconsistent sidespin. Check grip position before every shot.',freq:'Before every shot',clubs:'All'},
+      {name:'Forearm rotation timing',desc:'The moment forearms rotate determines the effect. Too soon = hook/draw. Too late = fade/slice. Find the consistent timing.',freq:'20 reps without ball',clubs:'All'},
+    ],
+  },
+  // TRAJECTORY EFFICIENCY (too high apex vs distance = wasted vertical)
+  trayectoria_ineficiente:{
+    es:[
+      {name:'Pelota penetrante como objetivo',desc:'La trayectoria más eficiente es la que maximiza distancia con el mínimo spin. Visualiza una bola que "perfora el aire" en lugar de "subir a la nube".',freq:'15 bolas',clubs:'H5, H6, H7'},
+      {name:'Punch shot controlado',desc:'Practica punch shots (manos adelante, finish corto, bola baja). Este movimiento enseña el shaft lean correcto y el control de loft.',freq:'20 bolas',clubs:'H6, H7'},
+      {name:'Bola más atrás',desc:'1-2 cm más atrás en el stance reduce el loft efectivo y la altura de trayectoria. Mantén la misma velocidad de swing.',freq:'Ajuste permanente',clubs:'H5, H6'},
+      {name:'Grip más firme en downswing',desc:'Una sensación de grip más firme en el downswing evita que el palo "acelere" la cara y suba la trayectoria. No aprietes, mantén constante.',freq:'15 bolas',clubs:'Todos'},
+    ],
+    en:[
+      {name:'Penetrating ball flight',desc:'The most efficient trajectory maximizes distance with minimum spin. Visualize a ball that "pierces the air" rather than "climbing to the clouds".',freq:'15 balls',clubs:'H5, H6, H7'},
+      {name:'Controlled punch shot',desc:'Practice punch shots (hands forward, short finish, low ball). This movement teaches correct shaft lean and loft control.',freq:'20 balls',clubs:'H6, H7'},
+      {name:'Ball back',desc:'1-2 cm further back in the stance reduces effective loft and trajectory height. Keep the same swing speed.',freq:'Permanent adjustment',clubs:'H5, H6'},
+      {name:'Firmer grip in downswing',desc:'A firmer grip feel in the downswing prevents the club from accelerating the face upward. Don\'t squeeze — just maintain constant pressure.',freq:'15 balls',clubs:'All'},
+    ],
+  },
   // CONSISTENCY
   consistencia:{
     es:[
@@ -1919,6 +2068,123 @@ function buildAnalysis(){
         data:  t(`${c1}: <span>${d1}m</span> · ${c2}: <span>${d2}m</span> · distancias intermedias sin cobertura`,
                  `${c1}: <span>${d1}m</span> · ${c2}: <span>${d2}m</span> · no club for intermediate distances`),
         drills: getDrills('gapping',2)});
+    }
+  }
+
+  // ── TRAJECTORY HEIGHT VARIANCE ──
+  const alturas=filtered.map(s=>s.altura_max).filter(v=>v!=null);
+  if(alturas.length>=5){
+    const avgAlt=avg(alturas), sdAlt=stdDev(alturas);
+    if(avgAlt>0 && sdAlt/avgAlt>0.30){
+      issues.push({prio:'orange', tag:t('TRAYECTORIA','TRAJECTORY'), clubs:t('Todos','All'),
+        title: t(`Altura máxima inconsistente (CV ${(sdAlt/avgAlt*100).toFixed(0)}%)`,
+                 `Inconsistent apex height (CV ${(sdAlt/avgAlt*100).toFixed(0)}%)`),
+        data:  t(`Altura media: <span>${avgAlt.toFixed(1)}m</span> · desv: <span>±${sdAlt.toFixed(1)}m</span> · trayectoria muy variable`,
+                 `Avg apex: <span>${avgAlt.toFixed(1)}m</span> · std: <span>±${sdAlt.toFixed(1)}m</span> · very variable trajectory`),
+        drills: getDrills('altura_variable',4)});
+    }
+  }
+
+  // ── CARRY RATIO (dist_vuelo / dist_total) ──
+  const carryRatios=filtered.filter(s=>s.dist_vuelo>0&&s.dist_total>5).map(s=>s.dist_vuelo/s.dist_total);
+  if(carryRatios.length>=4){
+    const avgCarry=avg(carryRatios);
+    if(avgCarry<0.78){
+      issues.push({prio:'green', tag:t('CARRY','CARRY'), clubs:t('Todos','All'),
+        title: t(`Bajo porcentaje de vuelo (${(avgCarry*100).toFixed(0)}% carry)`,
+                 `Low carry ratio (${(avgCarry*100).toFixed(0)}% carry)`),
+        data:  t(`La bola vuela <span>${(avgCarry*100).toFixed(0)}%</span> de la distancia total · ideal 82–92% · poco spin o bajo lanzamiento`,
+                 `Ball carries <span>${(avgCarry*100).toFixed(0)}%</span> of total distance · ideal 82–92% · low spin or low launch`),
+        drills: getDrills('carry_bajo',3)});
+    } else if(avgCarry>0.96){
+      issues.push({prio:'green', tag:t('CARRY','CARRY'), clubs:t('Todos','All'),
+        title: t(`Carry casi total (${(avgCarry*100).toFixed(0)}%) — sin rodadura`,
+                 `Near-total carry (${(avgCarry*100).toFixed(0)}%) — no rollout`),
+        data:  t(`La bola vuela <span>${(avgCarry*100).toFixed(0)}%</span> de la distancia total · spin o trayectoria excesivamente alta`,
+                 `Ball carries <span>${(avgCarry*100).toFixed(0)}%</span> of total distance · excessive spin or trajectory`),
+        drills: getDrills('carry_alto',3)});
+    }
+  }
+
+  // ── FACE ANGLE VARIANCE ──
+  const caraVals=filtered.map(s=>s.cara_palo).filter(v=>v!=null);
+  if(caraVals.length>=5){
+    const sdCara=stdDev(caraVals);
+    if(sdCara>4){
+      issues.push({prio:'orange', tag:t('CARA','FACE'), clubs:t('Todos','All'),
+        title: t(`Cara muy variable (±${sdCara.toFixed(1)}°)`,`Highly variable face angle (±${sdCara.toFixed(1)}°)`),
+        data:  t(`Desv. cara: <span>±${sdCara.toFixed(1)}°</span> · media ${fmtSign(avg(caraVals),1)}° · la cara cambia radicalmente de golpe a golpe`,
+                 `Face std dev: <span>±${sdCara.toFixed(1)}°</span> · avg ${fmtSign(avg(caraVals),1)}° · face angle changes radically shot to shot`),
+        drills: getDrills('cara_variable',4)});
+    }
+  }
+
+  // ── PATH VARIANCE ──
+  const lineaVals=filtered.map(s=>s.linea_cabeza).filter(v=>v!=null);
+  if(lineaVals.length>=5){
+    const sdLinea=stdDev(lineaVals);
+    if(sdLinea>5){
+      issues.push({prio:'orange', tag:t('CAMINO','PATH'), clubs:t('Todos','All'),
+        title: t(`Camino de swing muy variable (±${sdLinea.toFixed(1)}°)`,`Highly variable swing path (±${sdLinea.toFixed(1)}°)`),
+        data:  t(`Desv. camino: <span>±${sdLinea.toFixed(1)}°</span> · media ${fmtSign(avg(lineaVals),1)}° · algunos golpes out-to-in, otros in-to-out`,
+                 `Path std dev: <span>±${sdLinea.toFixed(1)}°</span> · avg ${fmtSign(avg(lineaVals),1)}° · some shots out-to-in, others in-to-out`),
+        drills: getDrills('path_variable',4)});
+    }
+  }
+
+  // ── FAT / THIN SHOTS (short outliers) ──
+  if(filtered.length>=6){
+    const dists=filtered.map(s=>s.dist_total);
+    const avgD=avg(dists), sdD=stdDev(dists);
+    const pctShort=filtered.filter(s=>s.dist_total<avgD-1.5*sdD).length/filtered.length*100;
+    if(pctShort>18){
+      issues.push({prio:'orange', tag:t('CONTACTO','CONTACT'), clubs:t('Todos','All'),
+        title: t(`${Math.round(pctShort)}% de golpes muy cortos (fat/thin)`,
+                 `${Math.round(pctShort)}% of shots well short (fat/thin)`),
+        data:  t(`Dist. media: <span>${avgD.toFixed(0)}m</span> · ${Math.round(pctShort)}% de golpes a menos de ${(avgD-1.5*sdD).toFixed(0)}m`,
+                 `Avg dist: <span>${avgD.toFixed(0)}m</span> · ${Math.round(pctShort)}% of shots below ${(avgD-1.5*sdD).toFixed(0)}m`),
+        drills: getDrills('strike_pobre',4)});
+    }
+  }
+
+  // ── DOUBLE CROSS (path and face in opposite directions) ──
+  const dblCross=filtered.filter(s=>s.linea_cabeza!=null&&s.cara_palo!=null&&
+    ((s.linea_cabeza>2&&s.cara_palo<-2)||(s.linea_cabeza<-2&&s.cara_palo>2)));
+  if(filtered.length>=5 && dblCross.length/filtered.length>0.30){
+    const pct=Math.round(dblCross.length/filtered.length*100);
+    issues.push({prio:'red', tag:t('TÉCNICA','TECHNIQUE'), clubs:t('Todos','All'),
+      title: t(`${pct}% de golpes con "double cross" (cara y camino opuestos)`,
+               `${pct}% of shots with "double cross" (face and path opposing)`),
+      data:  t(`Cara y camino apuntan en sentidos contrarios · la bola sale de forma impredecible · requiere simplificar el impacto`,
+               `Face and path point in opposite directions · ball flight is unpredictable · impact needs to be simplified`),
+      drills: getDrills('doble_cross',4)});
+  }
+
+  // ── SIDESPIN INCONSISTENCY ──
+  const efVals=filtered.map(s=>s.efecto_lat).filter(v=>v!=null);
+  if(efVals.length>=5){
+    const sdEf=stdDev(efVals);
+    if(sdEf>1500){
+      issues.push({prio:'orange', tag:t('EFECTO','SIDESPIN'), clubs:t('Todos','All'),
+        title: t(`Efecto lateral muy inconsistente (±${Math.round(sdEf)} rpm)`,
+                 `Highly inconsistent sidespin (±${Math.round(sdEf)} rpm)`),
+        data:  t(`Desv. efecto lat: <span>±${Math.round(sdEf)} rpm</span> · la bola curva diferente en cada golpe — a veces draw, a veces fade`,
+                 `Sidespin std dev: <span>±${Math.round(sdEf)} rpm</span> · ball curves differently each shot — sometimes draw, sometimes fade`),
+        drills: getDrills('efecto_inconsistente',4)});
+    }
+  }
+
+  // ── TRAJECTORY EFFICIENCY (apex height / total distance) ──
+  const effVals=filtered.filter(s=>s.altura_max>0&&s.dist_total>5).map(s=>s.altura_max/s.dist_total);
+  if(effVals.length>=4){
+    const avgEff=avg(effVals);
+    if(avgEff>0.14){
+      issues.push({prio:'green', tag:t('EFICIENCIA','EFFICIENCY'), clubs:t('Todos','All'),
+        title: t(`Trayectoria demasiado alta vs distancia (${(avgEff*100).toFixed(0)}%)`,
+                 `Trajectory too high for distance (${(avgEff*100).toFixed(0)}%)`),
+        data:  t(`Apex/distancia: <span>${(avgEff*100).toFixed(0)}%</span> · ideal 8–13% · energía malgastada en altura en lugar de distancia`,
+                 `Apex/distance: <span>${(avgEff*100).toFixed(0)}%</span> · ideal 8–13% · energy wasted on height instead of distance`),
+        drills: getDrills('trayectoria_ineficiente',3)});
     }
   }
 
