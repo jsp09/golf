@@ -215,16 +215,15 @@ canvas{display:block;width:100%;touch-action:none;}
 
 .analysis-section{margin-bottom:1rem;}
 .analysis-title{font-family:'Bebas Neue',sans-serif;font-size:1.2rem;color:var(--gl);letter-spacing:.04em;margin-bottom:.5rem;padding-bottom:.3rem;border-bottom:1px solid var(--border);}
-.analysis-card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.8rem .9rem;margin-bottom:.6rem;}
-.ac-head{display:flex;align-items:center;gap:.6rem;margin-bottom:.4rem;}
-.ac-palo{font-family:'DM Mono',monospace;font-size:.65rem;font-weight:600;}
-.ac-badge{font-family:'DM Mono',monospace;font-size:.55rem;padding:.15rem .4rem;border-radius:3px;}
-.badge-red{background:rgba(230,57,70,.2);color:#e63946;}
-.badge-orange{background:rgba(242,153,74,.2);color:#f2994a;}
-.badge-green{background:rgba(82,183,136,.2);color:#52b788;}
-.ac-stat{font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);line-height:1.8;background:rgba(0,0,0,.2);padding:.4rem .6rem;border-radius:3px;margin-bottom:.4rem;}
+.analysis-card{background:var(--card);border-left:3px solid var(--border);border-radius:0 4px 4px 0;padding:.75rem .85rem .75rem .8rem;margin-bottom:.55rem;}
+.ac-head{display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;flex-wrap:wrap;}
+.ac-badge{font-family:'DM Mono',monospace;font-size:.5rem;padding:.12rem .38rem;border-radius:2px;flex-shrink:0;letter-spacing:.06em;}
+.badge-red{background:rgba(230,57,70,.18);color:#e63946;}
+.badge-orange{background:rgba(242,153,74,.18);color:#f2994a;}
+.badge-green{background:rgba(82,183,136,.18);color:#52b788;}
+.ac-stat{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.75;background:rgba(0,0,0,.18);padding:.32rem .5rem;border-radius:3px;}
 .ac-stat span{color:var(--text);}
-.ac-fix{font-size:.82rem;line-height:1.6;color:var(--text);}
+.ac-fix{font-size:.8rem;line-height:1.6;color:var(--text);}
 .ac-fix strong{color:var(--gl);}
 .ac-fix .tip{display:block;padding:.3rem 0;border-bottom:1px solid var(--border);}
 .ac-fix .tip:last-child{border-bottom:none;}
@@ -238,16 +237,16 @@ canvas{display:block;width:100%;touch-action:none;}
 /* Progress & Analysis */
 .analysis-section{margin-bottom:1rem;}
 .analysis-title{font-family:'Bebas Neue',sans-serif;font-size:1.15rem;color:var(--gl);letter-spacing:.04em;margin-bottom:.5rem;padding-bottom:.3rem;border-bottom:1px solid var(--border);}
-.analysis-card{background:var(--card);border:1px solid var(--border);border-radius:6px;padding:.75rem .85rem;margin-bottom:.55rem;}
-.ac-head{display:flex;align-items:center;gap:.5rem;margin-bottom:.4rem;flex-wrap:wrap;}
-.ac-badge{font-family:'DM Mono',monospace;font-size:.52rem;padding:.15rem .4rem;border-radius:3px;flex-shrink:0;}
-.badge-red{background:rgba(230,57,70,.2);color:#e63946;}
-.badge-orange{background:rgba(242,153,74,.2);color:#f2994a;}
-.badge-green{background:rgba(82,183,136,.2);color:#52b788;}
-.ac-stat{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.8;background:rgba(0,0,0,.2);padding:.35rem .55rem;border-radius:3px;margin-bottom:.4rem;}
+.analysis-card{background:var(--card);border-left:3px solid var(--border);border-radius:0 4px 4px 0;padding:.75rem .85rem .75rem .8rem;margin-bottom:.55rem;}
+.ac-head{display:flex;align-items:center;gap:.5rem;margin-bottom:.35rem;flex-wrap:wrap;}
+.ac-badge{font-family:'DM Mono',monospace;font-size:.5rem;padding:.12rem .38rem;border-radius:2px;flex-shrink:0;letter-spacing:.06em;}
+.badge-red{background:rgba(230,57,70,.18);color:#e63946;}
+.badge-orange{background:rgba(242,153,74,.18);color:#f2994a;}
+.badge-green{background:rgba(82,183,136,.18);color:#52b788;}
+.ac-stat{font-family:'DM Mono',monospace;font-size:.6rem;color:var(--muted);line-height:1.75;background:rgba(0,0,0,.18);padding:.32rem .5rem;border-radius:3px;}
 .ac-stat span{color:var(--text);}
-.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:.4rem;margin-bottom:.7rem;}
-.sg-box{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:.55rem .6rem;text-align:center;}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.4rem;margin-bottom:.7rem;}
+.sg-box{background:var(--card);border:1px solid var(--border);border-radius:4px;padding:.5rem .4rem;text-align:center;}
 .sg-val{font-family:'Bebas Neue',sans-serif;font-size:1.35rem;line-height:1;}
 .sg-lbl{font-family:'DM Mono',monospace;font-size:.5rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-top:.12rem;}
 
@@ -2147,7 +2146,7 @@ function buildAnalysis(){
 
   // ── DISTANCE GAPPING ──
   const clubAvgDist=CLUBS.map(club=>{
-    const s=allValid.filter(x=>x.palo===club&&x.dist_total>5);
+    const s=filtered.filter(x=>x.palo===club&&x.dist_total>5);
     if(s.length<3)return null;
     return{club,avg:avg(s.map(x=>x.dist_total))};
   }).filter(Boolean).sort((a,b)=>a.avg-b.avg);
@@ -2397,6 +2396,62 @@ function buildAnalysis(){
   const bestClub=[...clubStats].sort((a,b)=>(b.cal-a.cal)-(b.sd-a.sd)*0.05)[0];
   const worstClub=[...clubStats].filter(x=>x.club!==(bestClub&&bestClub.club)).sort((a,b)=>(a.cal-b.cal)+(a.pctLat-b.pctLat)*0.05)[0];
 
+  // ── Prioritize, filter by club, and deduplicate issues ──
+  function issueGrp(iss){
+    const tag=(iss.tag||'').toLowerCase()
+      .replace(/é/g,'e').replace(/í/g,'i').replace(/ó/g,'o').replace(/ú/g,'u').replace(/ñ/g,'n');
+    const title=(iss.title||'').toLowerCase();
+    const clubAll=iss.clubs===t('Todos','All')||iss.clubs==='Todos'||iss.clubs==='All';
+    if(!clubAll){
+      if(tag.includes('gapping'))return'c_gapping';
+      if(tag.includes('wedge'))return'c_wedge';
+      if(tag.includes('tempo'))return'c_tempo';
+      if(tag.includes('consist'))return'c_consist';
+      if(tag.includes('velocid')||tag.includes('speed'))return'c_decel';
+      if(tag.includes('cara')||tag.includes('face'))return'c_face';
+      return'c_'+tag.slice(0,12);
+    }
+    if(tag.includes('critico')||tag.includes('critical')||tag.includes('important'))
+      return(title.includes('cara')||title.includes('face'))?'g_face':'g_path';
+    if(tag.includes('camino')||tag.includes('path'))return'g_path';
+    if(tag.includes('curva')||tag.includes('curve'))return'g_curve';
+    if(tag.includes('cara')||tag.includes('face'))return'g_face';
+    if(tag.includes('dispers')||tag.includes('sesgo')||tag.includes('bias')||tag.includes('aline')||tag.includes('align'))return'g_direction';
+    if(tag.includes('ataque')||tag.includes('attack'))return'g_attack';
+    if(tag.includes('contacto')||tag.includes('contact')||tag.includes('tecnica')||tag.includes('technique'))return'g_contact';
+    if(tag.includes('spin')||tag.includes('efecto')||tag.includes('sidespin'))return'g_spin';
+    if(tag.includes('trayect')||tag.includes('traject')||tag.includes('carry')||tag.includes('eficienc'))return'g_trajectory';
+    if(tag.includes('campo')||tag.includes('course'))return'g_bigmiss';
+    return'g_'+tag.slice(0,10);
+  }
+  const _isAll=c=>c===t('Todos','All')||c==='Todos'||c==='All';
+
+  // 1. Filter by relevance to selected club
+  const relevant=issues.filter(iss=>{
+    if(analysisClubFilter==='Todos'||analysisClubFilter==='All')return true;
+    if(_isAll(iss.clubs))return true;
+    const grp=CLUB_GROUPS[analysisClubFilter];
+    if(grp)return grp.some(c=>(CLUB_ABBR[c]||c)===iss.clubs||c===iss.clubs);
+    return iss.clubs===(CLUB_ABBR[analysisClubFilter]||analysisClubFilter);
+  });
+
+  // 2. Sort: red → orange → green
+  const _prank={red:0,orange:1,green:2};
+  relevant.sort((a,b)=>_prank[a.prio]-_prank[b.prio]);
+
+  // 3. Deduplicate: 1 global per semantic group, max 2 per-club per group
+  const _seenGlobal=new Set(), _perClubCnt={};
+  const deduped=relevant.filter(iss=>{
+    const grp=issueGrp(iss);
+    if(_isAll(iss.clubs)){if(_seenGlobal.has(grp))return false;_seenGlobal.add(grp);return true;}
+    _perClubCnt[grp]=(_perClubCnt[grp]||0)+1;return _perClubCnt[grp]<=2;
+  });
+
+  // 4. Show greens only when red/orange count is low
+  const nonGreen=deduped.filter(i=>i.prio!=='green');
+  const greens=deduped.filter(i=>i.prio==='green');
+  const finalIssues=nonGreen.length<4?[...nonGreen,...greens.slice(0,Math.max(0,5-nonGreen.length))]:nonGreen;
+
   // ── Filter bar options (language-aware) ──
   const filterOpts=[
     [t('Todos','All'),'Todos'],
@@ -2442,31 +2497,32 @@ function buildAnalysis(){
     </div>
   </div>`;
 
-  if(issues.length===0){
-    html+=`<div class="analysis-card" style="border-color:rgba(82,183,136,.4)">
-      <div class="ac-head"><span style="font-size:1.3rem">✅</span><span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--gl)">${t('Sin problemas detectados','No issues detected')}</span></div>
+  if(finalIssues.length===0){
+    html+=`<div class="analysis-card" style="border-left:3px solid #52b788;">
+      <div class="ac-head"><span style="font-family:'Bebas Neue',sans-serif;font-size:1rem;color:var(--gl)">${t('Sin problemas detectados','No issues detected')}</span></div>
       <div class="ac-fix">${t('Sesión muy consistente. Trabaja en aumentar velocidad manteniendo la precisión.','Very consistent session. Work on increasing speed while maintaining precision.')}</div>
     </div>`;
   } else {
-    html+=`<div class="analysis-title">⚠ ${t('Correcciones','Corrections')} (${issues.length})</div>`;
-    issues.forEach(issue=>{
-      const bc=issue.prio==='red'?'rgba(230,57,70,.4)':issue.prio==='orange'?'rgba(242,153,74,.3)':'rgba(82,183,136,.25)';
+    html+=`<div style="font-family:'DM Mono',monospace;font-size:.52rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin-bottom:.5rem;">${t('Puntos a trabajar','Focus areas')} · ${finalIssues.length}</div>`;
+    finalIssues.forEach(issue=>{
+      const lcol=issue.prio==='red'?'#e63946':issue.prio==='orange'?'#f2994a':'rgba(82,183,136,.5)';
       const badgeClass=issue.prio==='red'?'badge-red':issue.prio==='orange'?'badge-orange':'badge-green';
+      const clubTag=!_isAll(issue.clubs)?`<span style="font-family:'DM Mono',monospace;font-size:.5rem;color:var(--muted);margin-left:auto;flex-shrink:0;">${issue.clubs}</span>`:'';
       const drillsHtml=issue.drills.map(d=>`
-        <div style="margin-bottom:.5rem;padding:.5rem;background:rgba(0,0,0,.2);border-radius:4px;">
-          <div style="font-family:'Bebas Neue',sans-serif;font-size:.9rem;color:var(--gl);margin-bottom:.2rem;">${d.name}</div>
-          <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);margin-bottom:.25rem;">${d.freq} · ${d.clubs}</div>
-          <div style="font-size:.8rem;line-height:1.5;color:var(--text);">${d.desc}</div>
+        <div style="margin-bottom:.55rem;padding-left:.5rem;border-left:1px solid var(--border);">
+          <div style="font-family:'DM Mono',monospace;font-size:.6rem;color:var(--gl);">${d.name} <span style="color:var(--muted);font-size:.52rem;">· ${d.freq}</span></div>
+          <div style="font-size:.76rem;line-height:1.55;color:rgba(255,255,255,.72);margin-top:.15rem;">${d.desc}</div>
         </div>`).join('');
-      html+=`<div class="analysis-card" style="border-color:${bc}">
+      html+=`<div class="analysis-card" style="border-left:3px solid ${lcol};border-top:none;border-right:none;border-bottom:none;padding-left:.8rem;">
         <div class="ac-head">
           <span class="ac-badge ${badgeClass}">${issue.tag}</span>
-          <span style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:.03em">${issue.title}</span>
-          ${issue.clubs!==t('Todos','All')?`<span style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);margin-left:auto;">${issue.clubs}</span>`:''}
+          <span style="font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:.03em;flex:1;">${issue.title}</span>
+          ${clubTag}
         </div>
-        <div class="ac-stat">${issue.data}</div>
-        <div style="font-family:'DM Mono',monospace;font-size:.55rem;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;margin:.5rem 0 .3rem;">${t('Drills recomendados:','Recommended drills:')}</div>
-        ${drillsHtml}
+        <div class="ac-stat" style="margin-bottom:.5rem;">${issue.data}</div>
+        <div style="border-top:1px solid var(--border);padding-top:.45rem;">
+          ${drillsHtml}
+        </div>
       </div>`;
     });
   }
