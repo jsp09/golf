@@ -2430,6 +2430,14 @@ function buildAnalysis(){
   const relevant=issues.filter(iss=>{
     if(analysisClubFilter==='Todos'||analysisClubFilter==='All')return true;
     if(_isAll(iss.clubs))return true;
+    const isGroup=!!CLUB_GROUPS[analysisClubFilter];
+    // Gapping pairs (clubs='SW/PW'): show for group filters, not single-club filters
+    if(iss.clubs.includes('/')){
+      if(!isGroup)return false;
+      const parts=iss.clubs.split('/');
+      const grp=CLUB_GROUPS[analysisClubFilter];
+      return parts.some(p=>grp.some(c=>(CLUB_ABBR[c]||c)===p));
+    }
     const grp=CLUB_GROUPS[analysisClubFilter];
     if(grp)return grp.some(c=>(CLUB_ABBR[c]||c)===iss.clubs||c===iss.clubs);
     return iss.clubs===(CLUB_ABBR[analysisClubFilter]||analysisClubFilter);
