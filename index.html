@@ -1100,6 +1100,70 @@ const DRILLS = {
       {name:'Speed in the finish',desc:'Feel the club going "faster" in the follow-through than in the backswing. If the backswing is faster, you\'re decelerating.',freq:'15 balls',clubs:'All'},
     ],
   },
+  // PER-CLUB LATERAL BIAS
+  sesgo_por_palo:{
+    es:[
+      {name:'Alineación específica para ese palo',desc:'El sesgo lateral constante con un palo concreto suele venir de la alineación. Coloca palos en el suelo paralelos a la línea de juego y comprueba que tus pies, caderas y hombros apuntan correctamente con ESE palo.',freq:'Verificar en cada sesión',clubs:'El palo identificado'},
+      {name:'Cara al address con ese palo',desc:'Antes de cada golpe, coloca el palo detrás de la bola mirando directamente al objetivo. Muchos golfistas abren o cierran inconscientemente la cara al hacer el grip con ciertos palos.',freq:'Cada golpe de práctica',clubs:'El palo identificado'},
+      {name:'Posición de bola por palo',desc:'Cada palo tiene su posición ideal: wedges — centro; hierros medios — un dedo del centro; hierros largos — dos dedos del centro. Varía la posición 2cm y observa cómo cambia la desviación.',freq:'20 bolas',clubs:'El palo identificado'},
+      {name:'Grip check específico',desc:'Algunos palos con ángulo de mentón diferente hacen que el grip natural cambie la cara. Comprueba que ves 2 nudillos de la mano izquierda con todos los palos, no solo con los favoritos.',freq:'Al inicio de cada sesión',clubs:'El palo identificado'},
+      {name:'Swing espejo',desc:'Grábate con ese palo y compara con tu palo más fiable. La clave es detectar si el camino o la cara cambian entre palos.',freq:'1 sesión de análisis',clubs:'El palo identificado'},
+    ],
+    en:[
+      {name:'Alignment check per club',desc:'Consistent lateral bias with a specific club usually comes from alignment. Place clubs on the ground parallel to the target line and check that your feet, hips, and shoulders aim correctly with THAT club.',freq:'Verify each session',clubs:'Identified club'},
+      {name:'Face at address with that club',desc:'Before each shot, place the club behind the ball facing directly at the target. Many golfers unconsciously open or close the face when gripping certain clubs.',freq:'Every practice shot',clubs:'Identified club'},
+      {name:'Ball position per club',desc:'Each club has an ideal position: wedges — center; mid irons — one finger off center; long irons — two fingers off center. Move the ball 2cm and observe how the deviation changes.',freq:'20 balls',clubs:'Identified club'},
+      {name:'Grip check',desc:'Some clubs with different lie angles make your natural grip change the face. Check you see 2 knuckles of your left hand with all clubs, not just favorites.',freq:'Start of each session',clubs:'Identified club'},
+      {name:'Mirror swing',desc:'Record yourself with that club and compare with your most reliable club. The key is detecting if path or face changes between clubs.',freq:'1 analysis session',clubs:'Identified club'},
+    ],
+  },
+  // PULL-HOOK (out-to-in path + face closed to path)
+  pull_hook:{
+    es:[
+      {name:'Siente el palo ir a la derecha',desc:'El pull-hook viene de mezclar camino izquierda con cara cerrada. Practica la sensación de que el palo sale hacia la derecha del objetivo en el follow-through. No el resultado, la sensación interna.',freq:'20 bolas',clubs:'Todos los hierros'},
+      {name:'Fortalece el grip',desc:'Un grip demasiado fuerte (cara cerrada por grip) amplifica el hook. Rota la mano izquierda hasta ver exactamente 2 nudillos — no 3. El grip fuerte cierra la cara automáticamente.',freq:'Cada sesión hasta que sea automático',clubs:'Todos'},
+      {name:'Objetivo intermedio a la derecha',desc:'Elige un punto en el suelo 1m delante de la bola, 2m a la derecha de donde quieres ir. Apunta el palo AHÍ. La bola saldrá con draw hacia el objetivo real.',freq:'20 bolas',clubs:'H7, H8, H9'},
+      {name:'Pelota más retrasada',desc:'Mueve la bola 3cm hacia el pie derecho. Esto retrasa el punto de impacto, da tiempo al palo a cuadrarse y reduce el hook.',freq:'15 bolas con el palo afectado',clubs:'El palo identificado'},
+      {name:'Finish alto y a la derecha',desc:'Si el finish acaba bajo y a la izquierda, el camino ha ido demasiado a la izquierda. Practica terminar con las manos sobre el hombro derecho.',freq:'15 bolas',clubs:'Todos'},
+    ],
+    en:[
+      {name:'Feel the club going right',desc:'Pull-hook comes from mixing a leftward path with a closed face. Practice feeling the club exit to the RIGHT of the target in the follow-through. Not the result — the internal sensation.',freq:'20 balls',clubs:'All irons'},
+      {name:'Strengthen your grip (neutral)',desc:'Too strong a grip (face closed by grip) amplifies the hook. Rotate the left hand until you see exactly 2 knuckles — not 3. Strong grip automatically closes the face.',freq:'Each session until automatic',clubs:'All'},
+      {name:'Intermediate target right',desc:'Pick a spot on the ground 1m in front of the ball, 2m right of where you want to go. Aim the club THERE. The ball will start right with draw toward the real target.',freq:'20 balls',clubs:'H7, H8, H9'},
+      {name:'Ball back in stance',desc:'Move the ball 3cm toward the right foot. This delays the impact point, gives the club time to square up and reduces hook.',freq:'15 balls with the affected club',clubs:'Identified club'},
+      {name:'High right finish',desc:'If your finish ends low and left, the path went too far left. Practice finishing with hands over the right shoulder.',freq:'15 balls',clubs:'All'},
+    ],
+  },
+  // PUSH-SLICE (in-to-out path + face open to path)
+  push_slice:{
+    es:[
+      {name:'Gira los antebrazos en el impacto',desc:'El push-slice viene de la cara abierta al camino. Practica sentir los antebrazos rotando (mano derecha pasa por encima de la izquierda) justo en el impacto. Sin rotación = cara abierta = slice.',freq:'20 bolas muy lentas',clubs:'Todos'},
+      {name:'Cierra la cara antes del swing',desc:'En el address, cierra deliberadamente la cara 5° hacia la izquierda antes de hacer el grip. Esto compensa la tendencia a abrirla en el downswing.',freq:'15 bolas',clubs:'El palo más afectado'},
+      {name:'Grip más fuerte',desc:'Rota la mano izquierda hasta ver 3 nudillos. Esto cierra la cara en el impacto de forma natural sin tener que pensar en ello durante el swing.',freq:'Toda la sesión de corrección',clubs:'Todos'},
+      {name:'Impact bag o toalla',desc:'Coloca una bolsa de impacto o toalla enrollada junto a la bola, interior. Al golpear, los antebrazos deben rotar para no golpear el obstáculo.',freq:'15 repeticiones',clubs:'H7, H8, H9'},
+    ],
+    en:[
+      {name:'Rotate forearms through impact',desc:'Push-slice comes from an open face to path. Practice feeling the forearms rotate (right hand passes over left) right at impact. No rotation = open face = slice.',freq:'20 very slow balls',clubs:'All'},
+      {name:'Close the face at address',desc:'At address, deliberately close the face 5° left before gripping. This compensates for the tendency to open it in the downswing.',freq:'15 balls',clubs:'Most affected club'},
+      {name:'Stronger grip',desc:'Rotate the left hand to see 3 knuckles. This closes the face at impact naturally without having to think about it during the swing.',freq:'Full correction session',clubs:'All'},
+      {name:'Impact bag or towel',desc:'Place an impact bag or rolled towel next to the ball on the inside. When striking, the forearms must rotate to avoid hitting the obstacle.',freq:'15 reps',clubs:'H7, H8, H9'},
+    ],
+  },
+  // LOW SPIN FOR LONG IRONS
+  spin_bajo_hierro:{
+    es:[
+      {name:'Ataca la bola de arriba',desc:'El spin bajo en hierros casi siempre viene de no golpear de arriba hacia abajo. El divot debe aparecer DESPUÉS de donde estaba la bola. Si no hay divot, o está antes, estás barriendo.',freq:'20 bolas',clubs:'H5, H6, H7'},
+      {name:'Manos adelantadas en el impacto',desc:'Las manos deben estar por delante de la cabeza del palo en el impacto (shaft lean). Esto lofta correctamente el palo y genera spin. Si las manos están detrás, eliminas loft y pierdes spin.',freq:'15 bolas con referencia visual',clubs:'H5, H6'},
+      {name:'Posición de bola más centrada',desc:'Con hierros largos, muchos golfistas ponen la bola demasiado adelante, lo que hace el contacto ascendente y elimina spin. Mueve la bola 2-3cm hacia el centro.',freq:'20 bolas comparando posiciones',clubs:'H5, H6'},
+      {name:'Swing completo — no ayudes la bola',desc:'El intento de "levantar" la bola para que suba elimina el spin necesario. Confía en el loft del palo. Golpea hacia abajo y el palo se encarga de que suba.',freq:'Toda la sesión con hierros largos',clubs:'H5, H6, H7'},
+    ],
+    en:[
+      {name:'Attack from above',desc:'Low spin in irons almost always comes from not hitting down. The divot must appear AFTER where the ball was. No divot, or before the ball, means you\'re sweeping.',freq:'20 balls',clubs:'H5, H6, H7'},
+      {name:'Hands ahead at impact',desc:'Hands must be ahead of the clubhead at impact (shaft lean). This correctly lofts the club and generates spin. If hands are behind, you de-loft and lose spin.',freq:'15 balls with visual reference',clubs:'H5, H6'},
+      {name:'Ball position more centered',desc:'With long irons, many golfers place the ball too far forward, causing ascending contact and eliminating spin. Move the ball 2-3cm toward center.',freq:'20 balls comparing positions',clubs:'H5, H6'},
+      {name:'Full swing — don\'t help the ball up',desc:'Trying to "lift" the ball to make it rise eliminates necessary spin. Trust the club loft. Hit down and the club takes care of the trajectory.',freq:'Full session with long irons',clubs:'H5, H6, H7'},
+    ],
+  },
   // CONSISTENCY
   consistencia:{
     es:[
@@ -2248,6 +2312,62 @@ function buildAnalysis(){
                  `Club speed: <span>${fmt(avgVel,1)} m/s</span> (top quartile) Â· avg quality: <span>${fmt(avgCal,3)}</span> Â· club decelerating before impact`),
         drills: getDrills('deceleracion', 4)});
     }
+  });
+
+  // ── PER-CLUB LATERAL BIAS ──
+  CLUBS.forEach(club=>{
+    const cshots=filtered.filter(s=>s.palo===club&&s.desv_total!=null&&s.dist_total>5);
+    if(cshots.length<4)return;
+    const avgDesv=avg(cshots.map(s=>s.desv_total));
+    if(avgDesv==null||Math.abs(avgDesv)<10)return;
+    const pctSide=avgDesv<0
+      ?cshots.filter(s=>s.desv_total<-8).length/cshots.length*100
+      :cshots.filter(s=>s.desv_total>8).length/cshots.length*100;
+    const dir=avgDesv<0?t('izquierda','left'):t('derecha','right');
+    issues.push({prio:Math.abs(avgDesv)>18?'red':'orange',tag:t('SESGO','BIAS'),clubs:CLUB_ABBR[club]||club,
+      title:t(`${CLUB_ABBR[club]||club} — sale sistematicamente a la ${dir} (${fmtSign(avgDesv,1)}m)`,
+              `${CLUB_ABBR[club]||club} — consistently misses ${dir} (${fmtSign(avgDesv,1)}m)`),
+      data:t(`Desv. media: <span>${fmtSign(avgDesv,1)}m</span> · <span>${Math.round(pctSide)}%</span> de golpes >8m a la ${dir}`,
+             `Avg lateral: <span>${fmtSign(avgDesv,1)}m</span> · <span>${Math.round(pctSide)}%</span> of shots >8m ${dir}`),
+      drills:getDrills('sesgo_por_palo',3)});
+  });
+
+  // ── PULL-HOOK / PUSH-SLICE COMBINED PATTERN ──
+  // glCaraLinea already computed above; reuse it here
+  if(glLinea!=null&&glCaraLinea!=null&&filtered.length>=5){
+    const pullHook=glLinea>3&&glCaraLinea<-5;
+    const pushSlice=glLinea<-3&&glCaraLinea>5;
+    if(pullHook){
+      issues.push({prio:'red',tag:t('TÉCNICA','TECHNIQUE'),clubs:t('Todos','All'),
+        title:t(`Patrón pull-hook (camino ${fmtSign(glLinea,1)}° · cara-camino ${fmtSign(glCaraLinea,1)}°)`,
+                `Pull-hook pattern (path ${fmtSign(glLinea,1)}° · face-path ${fmtSign(glCaraLinea,1)}°)`),
+        data:t(`Camino out-to-in <span>${fmtSign(glLinea,1)}°</span> + cara cerrada al camino <span>${fmtSign(glCaraLinea,1)}°</span> · la combinación que maximiza la curva izquierda`,
+               `Out-to-in path <span>${fmtSign(glLinea,1)}°</span> + face closed to path <span>${fmtSign(glCaraLinea,1)}°</span> · the combination that maximizes left curve`),
+        drills:getDrills('pull_hook',4)});
+    }else if(pushSlice){
+      issues.push({prio:'red',tag:t('TÉCNICA','TECHNIQUE'),clubs:t('Todos','All'),
+        title:t(`Patrón push-slice (camino ${fmtSign(glLinea,1)}° · cara-camino +${fmtSign(glCaraLinea,1)}°)`,
+                `Push-slice pattern (path ${fmtSign(glLinea,1)}° · face-path +${fmtSign(glCaraLinea,1)}°)`),
+        data:t(`Camino in-to-out <span>${fmtSign(glLinea,1)}°</span> + cara abierta al camino <span>${fmtSign(glCaraLinea,1)}°</span> · la combinación que maximiza la curva derecha`,
+               `In-to-out path <span>${fmtSign(glLinea,1)}°</span> + face open to path <span>${fmtSign(glCaraLinea,1)}°</span> · the combination that maximizes right curve`),
+        drills:getDrills('push_slice',4)});
+    }
+  }
+
+  // ── LOW SPIN PER IRON (club-specific thresholds) ──
+  const ironSpinMin={'Hierro 5':3800,'Hierro 6':4200,'Hierro 7':5000,'Hierro 8':5500,'Hierro 9':6000};
+  CLUBS.forEach(club=>{
+    const minSpin=ironSpinMin[club];if(!minSpin)return;
+    const cshots=filtered.filter(s=>s.palo===club&&s.retroceso!=null&&s.dist_total>5);
+    if(cshots.length<3)return;
+    const avgSpin=avg(cshots.map(s=>s.retroceso));
+    if(avgSpin==null||avgSpin>=minSpin)return;
+    issues.push({prio:'orange',tag:'SPIN',clubs:CLUB_ABBR[club]||club,
+      title:t(`${CLUB_ABBR[club]||club} -- backspin bajo (${Math.round(avgSpin)} rpm)`,
+              `${CLUB_ABBR[club]||club} -- low backspin (${Math.round(avgSpin)} rpm)`),
+      data:t(`Backspin medio: <span>${Math.round(avgSpin)} rpm</span> - ideal >${minSpin} rpm para ${CLUB_ABBR[club]||club} - bola sin frenado al aterrizar`,
+             `Avg backspin: <span>${Math.round(avgSpin)} rpm</span> - ideal >${minSpin} rpm for ${CLUB_ABBR[club]||club} - ball won't stop on landing`),
+      drills:getDrills('spin_bajo_hierro',3)});
   });
 
   // â”€â”€ BEST / WORST CLUBS â”€â”€
