@@ -1100,6 +1100,42 @@ const DRILLS = {
       {name:'Speed in the finish',desc:'Feel the club going "faster" in the follow-through than in the backswing. If the backswing is faster, you\'re decelerating.',freq:'15 balls',clubs:'All'},
     ],
   },
+  driver_spin_bajo:{
+    es:[
+      {name:'Tee más bajo',desc:'Si el tee está muy alto, golpeas la mitad superior de la bola → bajo spin y efecto "knuckleball". Baja el tee hasta que la mitad de la bola quede al nivel de la corona del driver.',freq:'Ajustar antes de cada sesión',clubs:'Driver'},
+      {name:'Posición de la bola más atrasada',desc:'Con la bola muy adelantada, el palo sube demasiado en el impacto → bajo spin. Mueve la bola 2-3 cm hacia el centro del stance y comprueba el spin.',freq:'10 bolas de prueba',clubs:'Driver'},
+      {name:'Cara ligeramente cerrada al setup',desc:'Una cara muy abierta en el setup produce contacto en la zona alta-exterior de la cara (spin knuckleball). Alinea la cara neutral o 1° cerrada.',freq:'Verificar cada sesión',clubs:'Driver'},
+    ],
+    en:[
+      {name:'Lower tee height',desc:'If the tee is too high, you hit the top half of the ball → low spin and "knuckleball" effect. Lower the tee so half the ball is level with the driver crown.',freq:'Adjust before each session',clubs:'Driver'},
+      {name:'Ball position slightly back',desc:'With the ball too far forward, the club is rising steeply at impact → low spin. Move the ball 2-3 cm toward center and check spin.',freq:'10 test balls',clubs:'Driver'},
+      {name:'Slightly closed face at setup',desc:'A very open face at setup produces high-heel contact (knuckleball spin). Set the face neutral or 1° closed.',freq:'Check every session',clubs:'Driver'},
+    ],
+  },
+  driver_ataque:{
+    es:[
+      {name:'Setup: peso más en pie trasero',desc:'Con driver, el 60% del peso debe estar en el pie trasero al address. Esto promueve naturalmente un ángulo de ataque ascendente (+2° a +4°) sin compensaciones.',freq:'Check cada sesión',clubs:'Driver'},
+      {name:'Bola más adelantada en el stance',desc:'Coloca la bola en línea con el talón izquierdo (no el dedo pequeño). Si está demasiado atrás, el ángulo de ataque se vuelve negativo y pierdes distancia.',freq:'10 bolas de ajuste',clubs:'Driver'},
+      {name:'Drill "hit up"',desc:'Coloca un objeto pequeño (tee, moneda) 20 cm delante de la bola en la línea de objetivo. El palo debe pasar POR ENCIMA del objeto en el follow-through, no por debajo.',freq:'15 bolas',clubs:'Driver'},
+    ],
+    en:[
+      {name:'Setup: more weight on back foot',desc:'With driver, 60% weight should be on the back foot at address. This naturally promotes an ascending attack angle (+2° to +4°) without compensations.',freq:'Check every session',clubs:'Driver'},
+      {name:'Ball forward in stance',desc:'Place the ball in line with the left heel (not the little toe). If it\'s too far back, the attack angle becomes negative and you lose distance.',freq:'10 adjustment balls',clubs:'Driver'},
+      {name:'"Hit up" drill',desc:'Place a small object (tee, coin) 20cm in front of the ball on the target line. The club must pass ABOVE the object on follow-through, not below.',freq:'15 balls',clubs:'Driver'},
+    ],
+  },
+  madera_hibrido_spin:{
+    es:[
+      {name:'Centro de la cara, no zona alta',desc:'El bajo spin en maderas/híbridos suele venir de impactos en la zona alta de la cara. Usa spray de impacto o scotch tape en la cara para ver dónde contactas realmente.',freq:'10 bolas de diagnóstico',clubs:'3M, HB4, HB5'},
+      {name:'Ataque ligeramente descendente',desc:'Con madera e híbrido, un ataque neutro a ligeramente descendente (-1° a -2°) maximiza el spin. Practica golpear la tierra justo después de la bola.',freq:'15 bolas',clubs:'3M, HB4'},
+      {name:'Posición de la bola',desc:'Con la bola demasiado adelante, el palo sube antes del impacto → zona alta de la cara → bajo spin. Para madera 3: talón izquierdo. Para híbrido: 2-3 cm más atrás que la madera.',freq:'Verificar setup',clubs:'3M, HB4, HB5'},
+    ],
+    en:[
+      {name:'Center of face, not high',desc:'Low spin with woods/hybrids usually comes from high-face contact. Use impact spray or scotch tape on the face to see where you\'re actually making contact.',freq:'10 diagnostic balls',clubs:'3M, HB4, HB5'},
+      {name:'Slightly descending attack',desc:'With fairway woods and hybrids, a neutral to slightly descending attack (-1° to -2°) maximizes spin. Practice hitting the ground just after the ball.',freq:'15 balls',clubs:'3M, HB4'},
+      {name:'Ball position',desc:'With the ball too far forward, the club rises before impact → high face contact → low spin. For 3-wood: left heel. For hybrid: 2-3 cm back from the wood.',freq:'Check setup',clubs:'3M, HB4, HB5'},
+    ],
+  },
   pull_hook:{
     es:[
       {name:'Drill de bandera (alineación)',desc:'Coloca una bandera o stick en el suelo apuntando al objetivo. Tu camino de swing va HACIA la bandera, pero la cara apunta levemente a la derecha. Si la cara cierra demasiado, el hook aparece. Trabaja cara neutral.',freq:'20 bolas',clubs:'Todos'},
@@ -2218,8 +2254,9 @@ function buildAnalysis(){
     }
   });
 
-  // ── SHANK / EXTREME LATERAL MISS ──
-  const shankShots = filtered.filter(s => s.dist_total > 5 && (Math.abs(s.desv_total||0) > 35 || Math.abs(s.ang_desv_total||0) > 30));
+  // ── SHANK / EXTREME LATERAL MISS (irons/wedges only — driver & woods can't shank) ──
+  const _isIronWedge = s => { const p=s.palo||''; return !p.includes('Madera')&&!p.includes('Wood')&&!p.includes('Híbrido')&&!p.includes('Hybrid')&&p!=='Driver'; };
+  const shankShots = filtered.filter(s => s.dist_total > 5 && _isIronWedge(s) && (Math.abs(s.desv_total||0) > 35 || Math.abs(s.ang_desv_total||0) > 30));
   const pctShank = filtered.length > 0 ? shankShots.length / filtered.length * 100 : 0;
   if(pctShank >= 3){
     issues.push({prio:'red', tag:t('CONTACTO','CONTACT'), clubs:t('Todos','All'),
@@ -2342,7 +2379,7 @@ function buildAnalysis(){
   }
 
   // ── LOW SPIN PER IRON ──
-  const ironSpinMin = {'Hierro 5':3800,'Hierro 6':4200,'Hierro 7':5000,'Hierro 8':5500,'Hierro 9':6000};
+  const ironSpinMin = {'Hierro 4':3500,'Hierro 5':3800,'Hierro 6':4200,'Hierro 7':5000,'Hierro 8':5500,'Hierro 9':6000};
   CLUBS.forEach(club => {
     const minSpin = ironSpinMin[club]; if(!minSpin) return;
     const cshots = filtered.filter(s => s.palo === club && s.retroceso != null && s.dist_total > 5);
@@ -2355,6 +2392,58 @@ function buildAnalysis(){
       data:  t(`Spin medio: <span>${Math.round(avgSpin)} rpm</span> · mínimo esperado ${minSpin} rpm · contacto descendente insuficiente`,
                `Avg spin: <span>${Math.round(avgSpin)} rpm</span> · expected min ${minSpin} rpm · insufficient descending contact`),
       drills: getDrills('spin_bajo_hierro', 3)});
+  });
+
+  // ── DRIVER SPIN (bajo = trayectoria inestable / knuckleball) ──
+  const driverShots = filtered.filter(s => s.palo === 'Driver' && s.retroceso != null && s.dist_total > 5);
+  if(driverShots.length >= 3){
+    const avgDrvSpin = avg(driverShots.map(s => s.retroceso));
+    const knuckleBalls = driverShots.filter(s => s.retroceso < 800).length;
+    if(avgDrvSpin != null && avgDrvSpin < 1500){
+      issues.push({prio:'red', tag:'SPIN', clubs:'DRV',
+        title: t(`Spin driver muy bajo (${Math.round(avgDrvSpin)} rpm)`, `Driver spin very low (${Math.round(avgDrvSpin)} rpm)`),
+        data:  t(`Spin medio: <span>${Math.round(avgDrvSpin)} rpm</span>${knuckleBalls>0?` · <span>${knuckleBalls}</span> golpe(s) knuckleball (<800 rpm)`:''} · ideal 1800–3000 rpm`,
+                 `Avg spin: <span>${Math.round(avgDrvSpin)} rpm</span>${knuckleBalls>0?` · <span>${knuckleBalls}</span> knuckleball shot(s) (<800 rpm)`:''} · ideal 1800–3000 rpm`),
+        drills: getDrills('driver_spin_bajo', 3)});
+    } else if(avgDrvSpin != null && avgDrvSpin < 2000){
+      issues.push({prio:'orange', tag:'SPIN', clubs:'DRV',
+        title: t(`Spin driver bajo (${Math.round(avgDrvSpin)} rpm)`, `Driver spin low (${Math.round(avgDrvSpin)} rpm)`),
+        data:  t(`Spin medio: <span>${Math.round(avgDrvSpin)} rpm</span> · ideal 1800–3000 rpm · trayectoria inestable con viento`,
+                 `Avg spin: <span>${Math.round(avgDrvSpin)} rpm</span> · ideal 1800–3000 rpm · unstable trajectory in wind`),
+        drills: getDrills('driver_spin_bajo', 3)});
+    }
+  }
+
+  // ── DRIVER ATAQUE DESCENDENTE (pierde distancia) ──
+  const drvAoAshots = filtered.filter(s => s.palo === 'Driver' && s.angulo_ataque != null && s.dist_total > 5);
+  if(drvAoAshots.length >= 3){
+    const avgDrvAoA = avg(drvAoAshots.map(s => s.angulo_ataque));
+    if(avgDrvAoA != null && avgDrvAoA < -1){
+      issues.push({prio:'orange', tag:t('ATAQUE','ATTACK'), clubs:'DRV',
+        title: t(`Ataque descendente con driver (${fmtSign(avgDrvAoA,1)}°)`, `Descending driver attack (${fmtSign(avgDrvAoA,1)}°)`),
+        data:  t(`Ángulo medio: <span>${fmtSign(avgDrvAoA,1)}°</span> · con driver lo ideal es +2° a +4° (ascendente) para maximizar distancia y reducir spin`,
+                 `Avg angle: <span>${fmtSign(avgDrvAoA,1)}°</span> · with driver the ideal is +2° to +4° (ascending) to maximize distance and reduce spin`),
+        drills: getDrills('driver_ataque', 3)});
+    }
+  }
+
+  // ── SPIN BAJO: MADERA / HÍBRIDO ──
+  const woodHybridSpinMin = {
+    'Madera 3':2200,'Madera 5':2500,'Madera 7':2800,'3 Madera':2200,'5 Madera':2500,'7 Madera':2800,
+    'Híbrido 3':3000,'Híbrido 4':3000,'Híbrido 5':3500,'Hybrid 3':3000,'Hybrid 4':3000,'Hybrid 5':3500,
+  };
+  CLUBS.forEach(club => {
+    const minSpin = woodHybridSpinMin[club]; if(!minSpin) return;
+    const cshots = filtered.filter(s => s.palo === club && s.retroceso != null && s.dist_total > 5);
+    if(cshots.length < 3) return;
+    const avgSpin = avg(cshots.map(s => s.retroceso));
+    if(avgSpin == null || avgSpin >= minSpin) return;
+    const abbr = CLUB_ABBR[club] || club;
+    issues.push({prio:'orange', tag:'SPIN', clubs: abbr,
+      title: t(`Spin bajo con ${abbr} (${Math.round(avgSpin)} rpm)`, `Low spin with ${abbr} (${Math.round(avgSpin)} rpm)`),
+      data:  t(`Spin medio: <span>${Math.round(avgSpin)} rpm</span> · mínimo recomendado ${minSpin} rpm · contacto en zona alta de la cara`,
+               `Avg spin: <span>${Math.round(avgSpin)} rpm</span> · recommended min ${minSpin} rpm · contact high on face`),
+      drills: getDrills('madera_hibrido_spin', 3)});
   });
 
   // ── BEST / WORST CLUBS ──
